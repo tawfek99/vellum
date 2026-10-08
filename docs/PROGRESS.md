@@ -1,11 +1,12 @@
 # AI Notes & Document Manager — Plan + Progress Log
 
-> **Mirrored in TWO places — keep both in sync:**
+> **Mirrored in TWO places — keep both in sync (write one, then copy):**
 > - In-repo: `docs/PROGRESS.md`
 > - Agent session-start file: `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`
 >
 > **Single source of truth.** First file to read at the start of EVERY session.
 > Update it at the end of every session (append to the Progress Log, refresh Current State).
+> Future-level plans are a guide, not a contract — adjust as we learn.
 
 ---
 
@@ -13,15 +14,15 @@
 
 **At the start of every session, in this order:**
 1. Read **§7 Current State / Next Action** and the most recent entry in **§6 Progress Log**.
-2. Read **§5 Next Up** to see the plan for the current level.
+2. Read **§5 Next Up** for the current level; skim **§4** for what follows.
 3. Read **§8 Open Items**.
 4. Confirm scope with the user before writing code.
 5. Implement ONE level only; verify it (tests/lint/build/HTTP) before moving on.
 
 **At the end of every session:**
 - Append a dated entry to **§6 Progress Log** (what changed, evidence, deviations, blockers).
-- Update **§7 Current State** and **§5 Next Up**.
-- Update BOTH mirrored copies of this file.
+- Update **§7 Current State** and **§5 Next Up** (and mark the finished level in **§4**).
+- Update BOTH mirrored copies (write one, then copy).
 - List key files created/changed so the next session does not have to rediscover them.
 
 **Golden rules:** one level at a time · don't rewrite working code · explain every new dependency and file change · never commit secrets · backend owns data + AI, frontend talks only to Supabase Auth/Storage + FastAPI.
@@ -52,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3).
+**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e` (in-repo progress doc).
 
 | Task | Command | Notes |
 |---|---|---|
@@ -101,6 +102,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | Secret key | `backend/.env` | `SUPABASE_SERVICE_ROLE_KEY` |
 | JWT secret | `backend/.env` (NEEDED before Level 4) | `SUPABASE_JWT_SECRET` |
 | DB connection string | `backend/.env` (NEEDED before Level 6) | `DATABASE_URL` (use `postgresql+asyncpg://…`) |
+| AI provider key | `backend/.env` (NEEDED before Level 13) | `AI_API_KEY` (+ `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`) |
 
 Both `.env` files are gitignored. `.env.example` files document the keys with no values.
 
@@ -109,96 +111,121 @@ Both `.env` files are gitignored. `.env.example` files document the keys with no
 ## 4. Development levels
 
 Each level = one verifiable slice. Complete a level, test it, mark it done, move on.
+Detailed future-level plans below are a guide and may be adjusted.
 
 ### Level 0 — Foundation (repo scaffolding) — ✅ DONE
-- [x] Repo structure: `frontend/`, `backend/`, root `README.md`, `.gitignore`
-- [x] `git init` + initial commit
-- [x] `.env.example` for both apps (no secrets committed)
-- [x] Backend `pyproject.toml` + venv; frontend `package.json` + install
+- Repo structure `frontend/` + `backend/`, root README, `.gitignore`, `.env.example`s, `git init`, deps installed.
 
 ### Level 1 — Backend boots — ✅ DONE
-- [x] FastAPI app factory + `main.py`
-- [x] `core/config.py` (pydantic-settings) + env loading
-- [x] Async SQLAlchemy engine + session factory
-- [x] Alembic init + baseline empty migration
-- [x] `GET /api/v1/health` returns `{status: "ok"}`
+- FastAPI app factory, pydantic-settings config, async SQLAlchemy engine/session, Alembic (async) + empty baseline, `GET /api/v1/health`.
 
 ### Level 2 — Frontend boots — ✅ DONE
-- [x] Vite + React + TS (strict) + Tailwind v4
-- [x] React Router (library mode) with a placeholder route
-- [x] TanStack Query `QueryClientProvider`
-- [x] oxlint + Prettier + typecheck + test scripts
-- [x] A rendered "app shell placeholder" page
+- Vite + React + TS (strict) + Tailwind v4 + React Router + TanStack Query, app shell + dashboard/404, oxlint + Prettier + vitest.
 
 ### Level 3 — Auth (frontend) — ✅ DONE & VERIFIED
-- [x] Typed env access (`src/config/env.ts` + `src/vite-env.d.ts`)
-- [x] Supabase JS client (`src/lib/supabase.ts`), single instance
-- [x] Login page (email/password) with loading/error states — warm paper theme
-- [x] Session handling (`useSession`) + sign-out in shell
-- [x] **Manual check:** user created a Supabase user and signed in successfully; session persists on reload
-- **Notes:** Google OAuth / sign-up / forgot-password intentionally NOT built (per user). Route guard deferred to Level 5. Committed `a551f35`.
+- Typed env, Supabase client, warm login page (email + password), `useSession`, `/login` route, shell sign-in/out.
+- No OAuth/sign-up/forgot (user decision). Verified by user sign-in. Commit `a551f35`.
 
 ### Level 4 — Auth (backend) — ⬅ NEXT
-- [ ] Supabase JWT verification dependency (`get_current_user`)
-- [ ] `GET /auth/me` returning identity from the verified token
-- [ ] (Deferred to Level 6: `profiles` table + auto-create + `PATCH /auth/me`)
-- **Done when:** valid token → 200 with identity; missing/invalid → 401.
+- **Goal:** backend verifies Supabase JWTs; identify the caller. No DB needed.
+- **Prereq:** `SUPABASE_JWT_SECRET` in `backend/.env`.
+- **Dependency:** `PyJWT`.
+- **Deliverables:** `app/core/security.py` (`get_current_user`), `app/schemas/auth.py`, `app/api/v1/auth.py` (`GET /auth/me` from token claims), router wiring, tests.
+- **Acceptance:** valid token → 200 (id + email); missing/invalid/expired → 401.
+- **Deferred to L6:** profiles table + auto-create + `PATCH /auth/me`.
 
 ### Level 5 — App shell + protected routes
-- [ ] Route guard (redirect to `/login` if no session)
-- [ ] Sidebar + top bar layout
-- [ ] Dashboard route
-- **Done when:** unauthenticated users are blocked; shell renders when logged in.
+- **Goal:** real authenticated layout + navigation; block logged-out users.
+- **Frontend:**
+  - `features/auth/RequireAuth.tsx` — guard: while session `loading` show a spinner; if no user → redirect `/login`.
+  - Restructure `app/router.tsx` into a protected branch (`RequireAuth` → `AppShell`).
+  - `components/layout/Sidebar.tsx` (Dashboard, Notes, Folders, Documents, Search, Settings) + `TopBar.tsx` (search entry, user menu).
+  - Mobile: sidebar becomes a drawer (Radix Dialog).
+  - UI primitives: `Spinner`, `Skeleton`, `EmptyState`.
+  - Dashboard becomes a light skeleton (recent items placeholders).
+- **Backend:** none.
+- **Acceptance:** logged-out `/` → `/login`; logged-in → shell with working nav; mobile drawer + keyboard navigation work; no layout shift on load.
+- **Notes:** needs a design discussion (navigation layout) per the standing rule.
+- **Risks:** auth-flash on load (mitigate with the `loading` state before redirect).
 
-### Level 6 — Folders (backend)
-- [ ] `folders` model + migration (+ `profiles` table from the Level 4 deferral)
-- [ ] CRUD endpoints + tree listing
+### Level 6 — Folders (backend) + profiles
+- **Goal:** persist user profiles + nested folders; CRUD API. (First DB level.)
+- **Prereq:** `DATABASE_URL` in `backend/.env`.
+- **Backend:**
+  - `profiles` model (id = auth UUID PK, email, full_name, avatar_url, timestamps); auto-create on first authenticated request.
+  - `folders` model (id, user_id FK, name, `parent_id` self-FK nullable, timestamps; unique `(user_id, parent_id, name)`).
+  - Alembic migration(s); `services/folders.py`; `schemas/folder.py`; `api/v1/folders.py` (tree list, create, detail, patch, delete).
+  - `/auth/me` now reads the profile from the DB; add `PATCH /auth/me`.
+- **Policy decisions:** deleting a folder that has children → move children to root (or require empty — decide); moving validates no cycles; names unique per parent.
+- **Acceptance:** all queries scoped to `user_id`; tree listing correct; delete policy enforced; tests cover the policy.
 
 ### Level 7 — Folders (UI)
-- [ ] Folder tree in sidebar, create/rename/delete/move
-- [ ] Empty/loading/error states, keyboard nav
+- **Goal:** full folder management in the sidebar.
+- **Frontend:** folder tree; create/rename/delete/move via Radix Dialog + DropdownMenu; `hooks/useFolders.ts` (TanStack Query) with optimistic updates; empty/loading/error states.
+- **Acceptance:** create/rename/delete/move folders; keyboard + screen-reader accessible; state stays consistent after mutations.
 
 ### Level 8 — Notes (backend)
-- [ ] `notes` model + migration
-- [ ] CRUD endpoints + list w/ folder filter + pagination
+- **Goal:** notes persistence + API.
+- **Backend:** `notes` model (id, user_id, folder_id nullable, title, content markdown, is_pinned, timestamps); migration; `services/notes.py`; `api/v1/notes.py` (list with folder filter + pagination + text search; create/detail/patch/delete).
+- **Acceptance:** notes scoped to user; pagination + filter work; tests.
 
 ### Level 9 — Notes (UI)
-- [ ] Note list + full-page editor + autosave
-- [ ] Loading/empty/error states
+- **Goal:** write and manage notes.
+- **Frontend:** note list; full-page editor (`features/notes/NoteEditor.tsx`); markdown textarea; debounced autosave (PATCH); delete; move to folder; pin; empty/loading/error states; keyboard-friendly.
+- **Acceptance:** create/edit/delete/autosave work; no data loss on navigation/unmount.
 
 ### Level 10 — Document upload + extraction (backend)
-- [ ] `documents`, `document_chunks`, `jobs` models + migrations
-- [ ] Storage upload (Supabase) + extraction job + status polling
-- [ ] PyMuPDF text extraction + chunking
+- **Goal:** accept PDFs, store them, extract + chunk text asynchronously.
+- **Backend:**
+  - Models: `documents`, `document_chunks`, `jobs` + migration.
+  - Supabase Storage upload (service role), bucket `documents` (create bucket).
+  - `services/pdf/extractor.py` (PyMuPDF) + `chunker.py`.
+  - DB-backed job runner (`services/jobs.py`) started in app lifespan; `api/v1/documents.py` (upload, list, detail, patch, delete, status).
+- **Policy:** no text layer → flag `needs_ocr` (don't fail silently); record failures with message.
+- **Acceptance:** upload PDF → status `ready` with extracted text + chunks; failures visible; storage access abstracted for later swaps.
+- **Risks:** long extractions on free tier (jobs + polling) and scanned PDFs (no text).
 
-### Level 11 — Document UI
-- [ ] Upload dropzone, document list, processing status UI
+### Level 11 — Documents UI
+- **Goal:** upload and track documents.
+- **Frontend:** drag/drop + file-picker dropzone with progress; document list with folder filter; status badges + polling (`GET /documents/{id}/status`); retry on failure.
+- **Acceptance:** upload and watch status transition; errors/retry shown.
 
 ### Level 12 — PDF viewer
-- [ ] Signed storage URL endpoint
-- [ ] `react-pdf` viewer in document workspace
+- **Goal:** read PDFs in-app.
+- **Backend:** `GET /documents/{id}/content` → short-lived signed Storage URL.
+- **Frontend:** `features/documents/PdfViewer.tsx` using `react-pdf` (pdf.js): text layer, page nav, zoom.
+- **Acceptance:** PDF renders in-app with selectable text; no storage credentials ever reach the client.
 
 ### Level 13 — AI summary
-- [ ] `AIService` protocol + `OpenAICompatibleProvider` + DeepSeek impl + factory
-- [ ] `/summary` job endpoint + polling
-- [ ] Summary panel UI
+- **Goal:** abstracted AI can summarize a document.
+- **Prereq:** `AI_API_KEY` (+ provider/model/base URL).
+- **Backend:** `ai/base.py` (`AIService` protocol + result models), `ai/providers/openai_compat.py`, `ai/providers/deepseek.py`, `ai/factory.py`, `ai/prompts.py`; `ai_generations` table; `POST /documents/{id}/summary` (job) + `GET`.
+- **Frontend:** summary panel in the document workspace.
+- **Acceptance:** click Summarize → stored summary shown; provider swapped via config only (no code change elsewhere).
 
 ### Level 14 — Document Q&A
-- [ ] Retrieval service (keyword first)
-- [ ] `/ask` + conversation history
-- [ ] Q&A panel UI
+- **Goal:** ask questions grounded in a document.
+- **Backend:** `ai/retrieval.py` (keyword/Postgres FTS first; vectors later), `qa_messages` table, `POST /documents/{id}/ask` (job) + `GET /documents/{id}/qa` (history).
+- **Frontend:** Q&A chat panel with history.
+- **Acceptance:** answers grounded in the user's document; history persists; retrieval scoped to the selected document + user.
 
 ### Level 15 — Global search
-- [ ] Unified `/search` (notes + extracted text, FTS + trigram)
-- [ ] Search UI + results page
+- **Goal:** search notes + document text in one place.
+- **Backend:** unified `GET /search` over notes + extracted document text (Postgres FTS + trigram), ranked results with snippets.
+- **Frontend:** `features/search/SearchPage.tsx` + command palette (⌘K) entry in the TopBar.
+- **Acceptance:** search returns notes and documents with match highlighting.
 
 ### Level 16 — Flashcards & quizzes
-- [ ] Structured-output generation + Pydantic validation
-- [ ] Flashcard + quiz view components
+- **Goal:** generate study material from documents.
+- **Backend:** structured (JSON) generation with Pydantic validation + single repair retry; store in `ai_generations` jsonb; `POST /documents/{id}/flashcards`, `POST /documents/{id}/quiz`.
+- **Frontend:** flashcard study view + quiz view.
+- **Acceptance:** generate and study; malformed model output never stored as success.
 
 ### Level 17 — Hardening + deploy
-- [ ] Test depth, a11y audit, error handling, pagination, optimistic updates
-- [ ] Deploy: frontend (Vercel/Netlify), backend (Render), Supabase
+- **Goal:** production-ready + live.
+- **Work:** test depth, accessibility audit, error boundaries, pagination, optimistic updates, structured logging/observability, security review (RLS as defense-in-depth).
+- **Deploy:** frontend (Vercel/Netlify), backend (Render free), Supabase config; env vars; CORS allowlist; cold-start handled via job + polling.
+- **Acceptance:** live on a custom domain with green checks.
 
 ---
 
@@ -240,52 +267,41 @@ Each level = one verifiable slice. Complete a level, test it, mark it done, move
 - Inspected repo: **empty** (greenfield).
 - Environment confirmed: Node v24.13.0, npm 11.20.0, Python 3.11.9, pip 24.0, git 2.55.0. Docker + Supabase CLI NOT installed.
 - Produced full architecture proposal (monorepo, schema, API, routing, auth, state, PDF, AI, deploy, phases).
-- Created this plan file. Level 0–2 defined as the first scope.
 
 ### 2026-10-08 — Implementation session (Levels 0–2) ✅
-- All 5 decisions confirmed by user; proceeded with defaults.
-- **Level 0 done:** monorepo scaffold (`frontend/`, `backend/`), `.gitignore`, root README, `.env.example` for both apps, `git init` (branch `main`), first commit `27101e8`.
-- **Level 1 done:** FastAPI app factory, `pydantic-settings` config, async SQLAlchemy engine + session, Alembic (async) with empty baseline revision `7b960e020541`, `GET /api/v1/health` → `{"status":"ok"}`.
-  - Extra: `alembic/env.py` pulls `DATABASE_URL` from settings, `target_metadata = Base.metadata`, offline mode validated; ruff hook formats generated migrations.
-- **Level 2 done:** Vite 8 + React 19 + TS 6 (strict) + Tailwind v4 + React Router 8 + TanStack Query 5; app shell, dashboard + 404 placeholders; vitest configured.
-- **Verification evidence:** backend pytest `1 passed`, ruff clean, `/api/v1/health` → `{"status":"ok"}` over HTTP; frontend typecheck clean, oxlint 0 errors, vitest `1 passed`, `vite build` succeeds.
-- **Actual versions:** FastAPI 0.143.0, SQLAlchemy 2.1.4, Alembic 1.20.0, Pydantic 2.14.0, uvicorn 0.54.0, pytest 9.1.1; React 19.2, Vite 8.3, TypeScript 6.0, Tailwind 4.3, React Router 8.4, TanStack Query 5.104, Vitest 5.0.3.
-- **Deviations from plan:** Vite template shipped **oxlint** instead of ESLint (kept it; added Prettier). TypeScript 6 deprecates `baseUrl`, so path alias uses `paths` without `baseUrl`.
+- **Level 0 done:** monorepo scaffold, `.gitignore`, root README, `.env.example`s, `git init`, commit `27101e8`.
+- **Level 1 done:** FastAPI app factory, settings, async engine/session, Alembic baseline `7b960e020541`, `/api/v1/health`.
+- **Level 2 done:** Vite 8 + React 19 + TS 6 (strict) + Tailwind v4 + React Router 8 + TanStack Query 5; shell + dashboard/404; vitest.
+- **Evidence:** pytest `1 passed`, ruff clean, health 200; typecheck clean, oxlint 0 errors, vitest `1 passed`, build ok.
+- **Versions:** FastAPI 0.143.0, SQLAlchemy 2.1.4, Alembic 1.20.0, Pydantic 2.14.0, uvicorn 0.54.0, pytest 9.1.1; React 19.2, Vite 8.3, TS 6.0, Tailwind 4.3, React Router 8.4, TanStack Query 5.104, Vitest 5.0.3.
+- **Deviations:** template shipped **oxlint** (kept; added Prettier); TS 6 deprecates `baseUrl` (uses `paths` only).
 
 ### 2026-10-08 — Supabase setup + documentation session
-- User created a Supabase project and provided: project ref `ojizxdzbskugfuqcjlvk`, Project URL `https://ojizxdzbskugfuqcjlvk.supabase.co`, and the new-format **publishable** + **secret** keys.
-- Mapped keys: publishable → frontend `VITE_SUPABASE_ANON_KEY`; secret → backend `SUPABASE_SERVICE_ROLE_KEY` (server-only).
-- **Still to collect:** `SUPABASE_JWT_SECRET` (before Level 4) and `DATABASE_URL` (before Level 6).
-- Restructured this document into the authoritative session-start reference.
+- Supabase project created: ref `ojizxdzbskugfuqcjlvk`, URL `https://ojizxdzbskugfuqcjlvk.supabase.co`; new-format publishable + secret keys provided.
+- Mapped: publishable → `VITE_SUPABASE_ANON_KEY`; secret → `SUPABASE_SERVICE_ROLE_KEY` (server-only).
+- Still to collect: `SUPABASE_JWT_SECRET` (L4), `DATABASE_URL` (L6), `AI_API_KEY` (L13).
 
 ### 2026-10-08 — Level 3 implementation (Auth, frontend) ✅
-- **Design direction agreed with user:** warm/paper/books. User supplied a login-page sketch; simplified to email + password only ("Welcome", no OAuth/sign-up/forgot).
-- **Installed:** `@supabase/supabase-js`.
-- **Created:**
-  - `frontend/.env` (gitignored) — API base URL, Supabase URL, publishable key.
-  - `src/vite-env.d.ts`, `src/config/env.ts` (typed, fail-fast env).
-  - `src/lib/supabase.ts` (single client), `src/lib/cn.ts`.
-  - `src/components/ui/` — `Button`, `Input`, `PasswordInput`, `icons.tsx`.
-  - `src/features/auth/useSession.ts`, `src/features/auth/LoginPage.tsx`, `LoginPage.test.tsx`.
-- **Changed:** `index.html` (Noto fonts), `src/index.css` (warm `@theme` tokens), `src/app/router.tsx` (`/login`), `src/components/layout/AppShell.tsx` (sign-in link / user + sign-out), `src/features/dashboard/DashboardPage.tsx` (re-themed).
-- **Verification:** typecheck clean · oxlint 0 errors · vitest `4 passed` · `vite build` succeeds. `/login` → 200.
-- **Known:** JS chunk ~560 kB due to `@supabase/supabase-js` (code-split later if desired).
-- **Committed:** `a551f35`.
+- Design: warm paper/books; user sketch → email + password only ("Welcome").
+- Created: `frontend/.env`, `src/vite-env.d.ts`, `src/config/env.ts`, `src/lib/supabase.ts`, `src/lib/cn.ts`, `src/components/ui/{Button,Input,PasswordInput,icons.tsx}`, `src/features/auth/{useSession.ts,LoginPage.tsx,LoginPage.test.tsx}`.
+- Changed: `index.html` (Noto fonts), `src/index.css` (warm `@theme`), `src/app/router.tsx` (`/login`), `AppShell` (auth-aware header), `DashboardPage` (re-themed).
+- Evidence: typecheck clean · oxlint 0 · vitest `4 passed` · build ok · `/login` 200. Commit `a551f35`.
 
-### 2026-10-08 — Level 3 verified + in-repo progress doc
-- User created a Supabase user and **signed in successfully** → **Level 3 verified working** end-to-end (sign in, session persists, sign-out).
-- Decision: maintain this progress doc in BOTH the repo (`docs/PROGRESS.md`) and the agent plan dir; keep them in sync.
+### 2026-10-08 — Level 3 verified + in-repo progress doc + future-level plans
+- User created a Supabase user and **signed in successfully** → Level 3 verified end-to-end.
+- Added in-repo progress doc `docs/PROGRESS.md` (commit `299928e`), linked from README; both copies kept in sync.
+- Expanded **Levels 5–17** with goals/files/acceptance, and added appendices **§9 API surface** + **§10 database schema**.
 - **Status:** ready for Level 4; still need `SUPABASE_JWT_SECRET`.
 
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–3 complete and verified. Commits: `27101e8` (Levels 0–2), `a551f35` (Level 3).
+- **Where we are:** Levels 0–3 complete and verified. Commits: `27101e8`, `a551f35`, `299928e`.
 - **Backend:** boots; `/api/v1/health` works; venv at `backend/.venv`; `backend/.env` not created yet.
-- **Frontend:** email + password sign-in works end-to-end (verified by user); dev server `http://localhost:5173`.
+- **Frontend:** email + password sign-in works end-to-end (verified); dev server `http://localhost:5173`.
 - **Next action:** implement **Level 4 — Auth (backend)** (§5) once `SUPABASE_JWT_SECRET` is available.
-- **Do not forget:** end each session by appending to §6 and updating §5/§7 in BOTH mirrored files.
+- **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
 
@@ -294,6 +310,43 @@ Each level = one verifiable slice. Complete a level, test it, mark it done, move
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
 2. **Collect `SUPABASE_JWT_SECRET`** — required before Level 4 (Supabase → Settings → API → JWT Settings).
 3. **Collect `DATABASE_URL`** (URI + connection pooler + DB password) — required before Level 6 (first table).
-4. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
-5. **`backend/.env`** — create at the start of Level 4.
-6. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+4. **Create Supabase Storage bucket `documents`** — required before Level 10.
+5. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
+6. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
+7. **`backend/.env`** — create at the start of Level 4.
+8. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+
+---
+
+## 9. Appendix — planned API surface (v1, under `/api/v1`)
+
+| Area | Method + path | Level |
+|---|---|---|
+| Auth | `GET /auth/me`, `PATCH /auth/me` | 4 / 6 |
+| Folders | `GET /folders` (tree), `POST /folders`, `GET /folders/{id}`, `PATCH /folders/{id}`, `DELETE /folders/{id}` | 6 |
+| Notes | `GET /notes` (filter + page), `POST /notes`, `GET /notes/{id}`, `PATCH /notes/{id}`, `DELETE /notes/{id}` | 8 |
+| Documents | `GET /documents`, `POST /documents`, `GET /documents/{id}`, `PATCH /documents/{id}`, `DELETE /documents/{id}`, `GET /documents/{id}/content`, `GET /documents/{id}/status` | 10–12 |
+| AI | `POST|GET /documents/{id}/summary`, `POST /documents/{id}/ask`, `GET /documents/{id}/qa`, `POST /documents/{id}/flashcards`, `POST /documents/{id}/quiz` | 13–16 |
+| Search | `GET /search` | 15 |
+| Health | `GET /health` | 1 |
+
+Conventions: JSON, list responses paginated (`{ items, total, page, page_size }`), mutations return the updated object, all routes require a verified Supabase JWT (except `/health` and `/auth/me` may accept the token directly).
+
+---
+
+## 10. Appendix — planned database schema
+
+Tables (all `uuid` PKs; `user_id` on every tenant-owned table; timestamps everywhere):
+
+- **profiles** — id (= auth user UUID, PK), email, full_name, avatar_url, created_at, updated_at.
+- **folders** — id, user_id FK, name, parent_id (self-FK, nullable), created_at, updated_at; unique `(user_id, parent_id, name)`.
+- **notes** — id, user_id FK, folder_id FK nullable, title, content (markdown), is_pinned, created_at, updated_at.
+- **documents** — id, user_id FK, folder_id FK nullable, title, file_name, storage_path, mime_type, file_size_bytes, page_count, processing_status (`uploaded|extracting|needs_ocr|ready|failed`), text_content, error_message, created_at, updated_at.
+- **document_chunks** — id, document_id FK, chunk_index, content, token_count, embedding `vector(1536)` nullable (pgvector, added at Level 14).
+- **jobs** — id, user_id FK, type, status (`queued|running|succeeded|failed`), payload jsonb, result jsonb, error, created_at, updated_at.
+- **ai_generations** — id, user_id FK, document_id FK nullable, note_id FK nullable, kind (`summary|qa|flashcards|quiz`), prompt, result jsonb, provider, model, status, error_message, tokens_used, created_at, updated_at.
+- **qa_messages** — id, generation_id FK, role (`user|assistant`), content, created_at.
+
+Indexes: `notes(user_id, folder_id)`, `documents(user_id, folder_id)`, `document_chunks(document_id)`, plus FTS/trigram indexes at Level 15.
+
+Migrations are managed by Alembic (`backend/alembic/versions/`). The initial baseline is empty; real tables arrive from Level 6 onward.
