@@ -1,12 +1,41 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens live here (Tailwind v4 CSS-first config). Extend as the design
- * system grows; component styles should prefer utility classes in JSX.
+ * Design tokens (Tailwind v4 CSS-first config).
+ *
+ * Warm, paper-and-books direction: cream backgrounds, paper-white surfaces,
+ * warm brown "ink" text, and a terracotta ("clay") accent.
  */
 @theme {
-  --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Noto Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Noto Serif', ui-serif, Georgia, 'Times New Roman', serif;
+
+  /* Page background */
+  --color-cream-50: #fdfaf3;
+  --color-cream-100: #f8f1e3;
+  --color-cream-200: #f0e5d1;
+
+  /* Cards / input surfaces */
+  --color-parchment-50: #fffdf9;
+  --color-parchment-100: #fbf5ea;
+  --color-parchment-200: #f1e7d5;
+  --color-parchment-300: #e4d5bd;
+
+  /* Text */
+  --color-ink-400: #9c8d7a;
+  --color-ink-500: #7c6f5e;
+  --color-ink-700: #4d4235;
+  --color-ink-900: #332a20;
+
+  /* Accent (terracotta) */
+  --color-clay-400: #cf7a4f;
+  --color-clay-500: #c0632f;
+  --color-clay-600: #a94f24;
+  --color-clay-700: #8c3f1d;
+
+  /* Errors (warm brick) */
+  --color-brick-50: #fbeeec;
+  --color-brick-600: #b23a2f;
 }
 
 html,
@@ -17,8 +46,9 @@ body,
 
 body {
   margin: 0;
-  background-color: var(--color-neutral-50);
-  color: var(--color-neutral-900);
+  font-family: var(--font-sans);
+  background-color: var(--color-cream-100);
+  color: var(--color-ink-900);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

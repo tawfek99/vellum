@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 
 import { AppShell } from '@/components/layout/AppShell'
+import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { NotFoundPage } from '@/features/misc/NotFoundPage'
 
@@ -9,6 +10,10 @@ import { NotFoundPage } from '@/features/misc/NotFoundPage'
  * lazy-loaded once real screens exist.
  */
 export const router = createBrowserRouter([
+  {
+    path: '/login',
+    element: <LoginPage />,
+  },
   {
     path: '/',
     element: <AppShell />,
