@@ -23,6 +23,12 @@ note-taker/
 └── docs/       # architecture notes (optional)
 ```
 
+## Progress & plan
+
+The architecture, decisions, and a running progress log live in
+**[`docs/PROGRESS.md`](docs/PROGRESS.md)**. Read it first — it is the project's
+single source of truth and is updated at the end of every work session.
+
 ## Getting started
 
 ### Backend
