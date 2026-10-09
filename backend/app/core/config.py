@@ -47,6 +47,16 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     @property
+    def supabase_issuer(self) -> str:
+        """Expected `iss` claim for Supabase access tokens."""
+        return f"{self.supabase_url.rstrip('/')}/auth/v1"
+
+    @property
+    def supabase_jwks_url(self) -> str:
+        """Public JWKS endpoint for verifying asymmetric (ES256/RS256) tokens."""
+        return f"{self.supabase_issuer}/.well-known/jwks.json"
+
+    @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
 

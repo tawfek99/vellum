@@ -15,6 +15,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30",
     "alembic>=1.14",
+    "PyJWT[crypto]>=2.9",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +32,8 @@ packages = ["app"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Generated migration scripts follow Alembic's template; don't lint them.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
