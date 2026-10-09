@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e` (in-repo progress doc).
+**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e`, `c6d9b49` (docs) · `b3d09b4` (Level 4).
 
 | Task | Command | Notes |
 |---|---|---|
@@ -86,12 +86,14 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 6 | Frontend linter: oxlint (template default) + Prettier | ✅ In use | Vite 8 template shipped oxlint, not ESLint |
 | 7 | Auth scope (Level 3): email + password only | ✅ Confirmed | No OAuth/sign-up/forgot per user |
 | 8 | Design direction: warm paper/books | ✅ Confirmed | User-supplied login sketch |
+| 9 | JWT verification: JWKS (ES256/RS256) + legacy HS256 fallback | ✅ Implemented | Reads token `alg`; supabase_url derives JWKS + issuer |
 
 ### 3b. External services — Supabase
 
 - **Project ref:** `ojizxdzbskugfuqcjlvk`
 - **Project URL:** `https://ojizxdzbskugfuqcjlvk.supabase.co`
 - **Key format:** Supabase's **new-format keys** — a *publishable* key (client-safe) and a *secret* key (server-only).
+- **JWT signing:** project exposes an **ES256** signing key, `kid = a268e64e-313c-45c8-ac2b-a896612ef74d`. The backend verifies asymmetric tokens via JWKS, and also supports the legacy HS256 secret.
 
 **Where secrets live (do NOT duplicate secret values in this file):**
 
@@ -100,7 +102,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | Project URL | `frontend/.env` + `backend/.env` | `VITE_SUPABASE_URL` / `SUPABASE_URL` |
 | Publishable key | `frontend/.env` | `VITE_SUPABASE_ANON_KEY` |
 | Secret key | `backend/.env` | `SUPABASE_SERVICE_ROLE_KEY` |
-| JWT secret | `backend/.env` (NEEDED before Level 4) | `SUPABASE_JWT_SECRET` |
+| JWT secret | `backend/.env` (set) | `SUPABASE_JWT_SECRET` (legacy HS256 fallback) |
 | DB connection string | `backend/.env` (NEEDED before Level 6) | `DATABASE_URL` (use `postgresql+asyncpg://…`) |
 | AI provider key | `backend/.env` (NEEDED before Level 13) | `AI_API_KEY` (+ `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`) |
 
@@ -126,12 +128,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Typed env, Supabase client, warm login page (email + password), `useSession`, `/login` route, shell sign-in/out.
 - No OAuth/sign-up/forgot (user decision). Verified by user sign-in. Commit `a551f35`.
 
-### Level 4 — Auth (backend) — ⬅ NEXT
-- **Goal:** backend verifies Supabase JWTs; identify the caller. No DB needed.
-- **Prereq:** `SUPABASE_JWT_SECRET` in `backend/.env`.
-- **Dependency:** `PyJWT`.
-- **Deliverables:** `app/core/security.py` (`get_current_user`), `app/schemas/auth.py`, `app/api/v1/auth.py` (`GET /auth/me` from token claims), router wiring, tests.
-- **Acceptance:** valid token → 200 (id + email); missing/invalid/expired → 401.
+### Level 4 — Auth (backend) — ✅ DONE
+- **Dual verification:** ES256/RS256 via JWKS + legacy HS256 via shared secret (chosen by token `alg`).
+- **Files:** `app/core/security.py` (`get_current_user`), `app/schemas/auth.py`, `app/api/v1/auth.py` (`GET /auth/me`), router wiring, `tests/conftest.py`, `tests/test_auth.py`.
+- **Evidence:** 7 tests pass (ES256 + HS256, tampered, expired, wrong issuer, no token); live JWKS fetch returns `kid a268e64e…` (EC); `/auth/me` → 401 without a token. Commit `b3d09b4`.
 - **Deferred to L6:** profiles table + auto-create + `PATCH /auth/me`.
 
 ### Level 5 — App shell + protected routes
@@ -229,25 +229,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 4 (Auth, backend)
+## 5. Next Up — Level 5 (App shell + protected routes)
 
-**Goal:** the FastAPI backend can verify a Supabase JWT and identify the caller — no database needed yet.
+**Goal:** a real authenticated layout with navigation; logged-out users are redirected to `/login`. **Frontend only — no backend changes.**
 
-**Prerequisite value:** `SUPABASE_JWT_SECRET` in `backend/.env` (Supabase → Settings → API → JWT Settings, or Settings → Authentication → JWT Settings).
+**Files to create/change (frontend):**
+- `features/auth/RequireAuth.tsx` — guard: while `useSession().loading` show a spinner; if no user → redirect to `/login`.
+- `app/router.tsx` — wrap app routes in `RequireAuth` → `AppShell`; keep `/login` public.
+- `components/layout/Sidebar.tsx` — nav (Dashboard, Notes, Folders, Documents, Search, Settings).
+- `components/layout/TopBar.tsx` — search entry + user menu (email, sign out).
+- Mobile: sidebar becomes a drawer (Radix Dialog).
+- UI primitives: `Spinner`, `Skeleton`, `EmptyState`.
+- Dashboard: replace placeholder with a light "recent items" skeleton.
 
-**Dependency:** `PyJWT` — verify the HS256 signature of the Supabase access token.
+**Design discussion required first** (nav layout, sidebar behaviour) per the standing rule.
 
-**Files to create/change (backend):**
-- `backend/.env` — create from `.env.example`: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` (leave `DATABASE_URL` as the placeholder this level).
-- `app/core/security.py` — `get_current_user` dependency: read `Authorization: Bearer <token>`, verify signature/expiry with the JWT secret, return `{ id, email }`; 401 on missing/invalid/expired.
-- `app/schemas/auth.py` — `CurrentUser` response model.
-- `app/api/v1/auth.py` — `GET /auth/me` returning the verified identity from the token claims.
-- Wire into `app/api/v1/router.py`.
-- Tests: valid token → 200; missing/invalid/expired → 401.
-
-**Acceptance:** `/api/v1/auth/me` with a real Supabase access token → the user's id + email; without/with a bad token → 401.
-
-**Deferred to Level 6:** `profiles` table, auto-create on first login, `PATCH /auth/me` (all need `DATABASE_URL`).
+**Acceptance:** logged-out `/` → `/login`; logged-in → shell with working nav; mobile drawer + keyboard navigation work; no auth flash on load.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -293,14 +290,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Expanded **Levels 5–17** with goals/files/acceptance, and added appendices **§9 API surface** + **§10 database schema**.
 - **Status:** ready for Level 4; still need `SUPABASE_JWT_SECRET`.
 
+### 2026-10-09 — Level 4 implementation (Auth, backend) ✅
+- Project exposes an **ES256** signing key (`kid a268e64e…`) **and** a legacy HS256 secret → implemented **dual JWT verification** (chosen by token `alg`).
+- **Added:** `PyJWT[crypto]`; `app/core/security.py` (`get_current_user`); `app/schemas/auth.py`; `app/api/v1/auth.py` (`GET /auth/me`); `config` properties `supabase_issuer` / `supabase_jwks_url`; `tests/conftest.py`.
+- **Changed:** `app/api/v1/router.py` (mount auth); `pyproject.toml` (ruff excludes `alembic/versions`); `backend/.env` created (gitignored); `.env.example` comment.
+- **Evidence:** 7 tests pass (ES256 + HS256, tampered, expired, wrong issuer, no token); live JWKS fetch returns the real EC key; server boots with real env, `/health` 200, `/auth/me` 401 without token. Commit `b3d09b4`.
+- **Status:** Level 4 done; ready for Level 5 (app shell + protected routes). Next value needed: `DATABASE_URL` (Level 6).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–3 complete and verified. Commits: `27101e8`, `a551f35`, `299928e`.
-- **Backend:** boots; `/api/v1/health` works; venv at `backend/.venv`; `backend/.env` not created yet.
-- **Frontend:** email + password sign-in works end-to-end (verified); dev server `http://localhost:5173`.
-- **Next action:** implement **Level 4 — Auth (backend)** (§5) once `SUPABASE_JWT_SECRET` is available.
+- **Where we are:** Levels 0–4 complete. Commits: `27101e8`, `a551f35`, `299928e`, `c6d9b49`, `b3d09b4`.
+- **Backend:** boots with real `backend/.env`; `/api/v1/health` → 200; `/api/v1/auth/me` verifies JWTs (ES256 via JWKS + HS256 via secret); 7 tests pass; venv at `backend/.venv`.
+- **Frontend:** email + password sign-in works end-to-end (verified earlier); dev server was killed by an environment restart — restart with `npm run dev`.
+- **Next action:** implement **Level 5 — App shell + protected routes** (§5). A **design discussion is required first**.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
@@ -308,13 +312,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Collect `SUPABASE_JWT_SECRET`** — required before Level 4 (Supabase → Settings → API → JWT Settings).
-3. **Collect `DATABASE_URL`** (URI + connection pooler + DB password) — required before Level 6 (first table).
-4. **Create Supabase Storage bucket `documents`** — required before Level 10.
-5. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
-6. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
-7. **`backend/.env`** — create at the start of Level 4.
-8. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+2. **Collect `DATABASE_URL`** (URI + connection pooler + DB password) — required before Level 6 (first table).
+3. **Create Supabase Storage bucket `documents`** — required before Level 10.
+4. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
+5. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
+6. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+7. **`backend/.env`** — created at Level 4 (gitignored).
 
 ---
 
