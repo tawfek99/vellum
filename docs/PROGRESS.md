@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e`, `c6d9b49` (docs) · `b3d09b4` (Level 4).
+**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e`, `c6d9b49` (docs) · `b3d09b4` (Level 4) · `0c6a537` (docs) · `34ff9f0` (Level 5).
 
 | Task | Command | Notes |
 |---|---|---|
@@ -87,6 +87,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 7 | Auth scope (Level 3): email + password only | ✅ Confirmed | No OAuth/sign-up/forgot per user |
 | 8 | Design direction: warm paper/books | ✅ Confirmed | User-supplied login sketch |
 | 9 | JWT verification: JWKS (ES256/RS256) + legacy HS256 fallback | ✅ Implemented | Reads token `alg`; supabase_url derives JWKS + issuer |
+| 10 | App-shell layout adapted from user's "Libretto" reference | ✅ Confirmed | Sidebar + topbar + dashboard; **no AI panel on dashboard** (goes in document workspace, L13); keep terracotta accent |
 
 ### 3b. External services — Supabase
 
@@ -134,19 +135,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 7 tests pass (ES256 + HS256, tampered, expired, wrong issuer, no token); live JWKS fetch returns `kid a268e64e…` (EC); `/auth/me` → 401 without a token. Commit `b3d09b4`.
 - **Deferred to L6:** profiles table + auto-create + `PATCH /auth/me`.
 
-### Level 5 — App shell + protected routes
-- **Goal:** real authenticated layout + navigation; block logged-out users.
-- **Frontend:**
-  - `features/auth/RequireAuth.tsx` — guard: while session `loading` show a spinner; if no user → redirect `/login`.
-  - Restructure `app/router.tsx` into a protected branch (`RequireAuth` → `AppShell`).
-  - `components/layout/Sidebar.tsx` (Dashboard, Notes, Folders, Documents, Search, Settings) + `TopBar.tsx` (search entry, user menu).
-  - Mobile: sidebar becomes a drawer (Radix Dialog).
-  - UI primitives: `Spinner`, `Skeleton`, `EmptyState`.
-  - Dashboard becomes a light skeleton (recent items placeholders).
-- **Backend:** none.
-- **Acceptance:** logged-out `/` → `/login`; logged-in → shell with working nav; mobile drawer + keyboard navigation work; no layout shift on load.
-- **Notes:** needs a design discussion (navigation layout) per the standing rule.
-- **Risks:** auth-flash on load (mitigate with the `loading` state before redirect).
+### Level 5 — App shell + protected routes — ✅ DONE
+- **Delivered:** `RequireAuth` guard (spinner → redirect); `AppShell` (fixed sidebar + scrollable main); `SidebarContent` + `Sidebar` + `MobileNav` (Radix Dialog drawer); `TopBar` (search placeholder, disabled "New", `UserMenu` with sign out); revamped dashboard (greeting + empty states); Notes/Documents/Settings placeholder pages; primitives `Spinner`/`Skeleton`/`EmptyState`/`Avatar`; `lib/user.ts`.
+- **Deps added:** `lucide-react`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `8 passed` · build ok. Commit `34ff9f0`.
+- **Deferred:** folders in the sidebar (L7); real search (L15); the "New" action (L8–L11).
 
 ### Level 6 — Folders (backend) + profiles
 - **Goal:** persist user profiles + nested folders; CRUD API. (First DB level.)
@@ -229,22 +222,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 5 (App shell + protected routes)
+## 5. Next Up — Level 6 (Folders backend + profiles)
 
-**Goal:** a real authenticated layout with navigation; logged-out users are redirected to `/login`. **Frontend only — no backend changes.**
+**Goal:** first database level — persist user profiles and nested folders, with a CRUD API.
 
-**Files to create/change (frontend):**
-- `features/auth/RequireAuth.tsx` — guard: while `useSession().loading` show a spinner; if no user → redirect to `/login`.
-- `app/router.tsx` — wrap app routes in `RequireAuth` → `AppShell`; keep `/login` public.
-- `components/layout/Sidebar.tsx` — nav (Dashboard, Notes, Folders, Documents, Search, Settings).
-- `components/layout/TopBar.tsx` — search entry + user menu (email, sign out).
-- Mobile: sidebar becomes a drawer (Radix Dialog).
-- UI primitives: `Spinner`, `Skeleton`, `EmptyState`.
-- Dashboard: replace placeholder with a light "recent items" skeleton.
+**Prerequisite:** `DATABASE_URL` in `backend/.env` (Supabase → **Connect** → URI → enable "Use connection pooler"; include the project's DB password). Convert to the `postgresql+asyncpg://…` form.
 
-**Design discussion required first** (nav layout, sidebar behaviour) per the standing rule.
+**Backend:**
+- `profiles` model (id = auth UUID PK, email, full_name, avatar_url, timestamps); auto-create on first authenticated request (inside `get_current_user`).
+- `folders` model (id, user_id FK, name, `parent_id` self-FK nullable, timestamps; unique `(user_id, parent_id, name)`).
+- Alembic migration(s) via `alembic revision --autogenerate`; `services/folders.py`; `schemas/folder.py`; `api/v1/folders.py` (tree list, create, detail, patch, delete).
+- `/auth/me` now reads the profile from the DB; add `PATCH /auth/me`.
+- Tests: create/list/rename/delete + per-user scoping.
 
-**Acceptance:** logged-out `/` → `/login`; logged-in → shell with working nav; mobile drawer + keyboard navigation work; no auth flash on load.
+**Policy decisions to settle:** deleting a folder that has children (move to root vs require empty); cycle prevention on move; unique name per parent.
+
+**Acceptance:** folders persist, scoped per user; tree listing correct; delete policy enforced.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -297,14 +290,23 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 7 tests pass (ES256 + HS256, tampered, expired, wrong issuer, no token); live JWKS fetch returns the real EC key; server boots with real env, `/health` 200, `/auth/me` 401 without token. Commit `b3d09b4`.
 - **Status:** Level 4 done; ready for Level 5 (app shell + protected routes). Next value needed: `DATABASE_URL` (Level 6).
 
+### 2026-10-10 — Level 5 implementation (App shell + protected routes) ✅
+- **Design:** adopted the user's "Libretto" reference, adapted to our warm theme. Decisions: **no AI panel on the dashboard** (deferred to the document workspace, L13); **keep terracotta** accent; nav = Dashboard / Notes / Documents / My Library / Settings.
+- **Deps added:** `lucide-react` (line icons), `@radix-ui/react-dialog` (mobile drawer), `@radix-ui/react-dropdown-menu` (profile menu).
+- **Added:** `features/auth/RequireAuth.tsx`; `components/layout/{AppShell,Sidebar,SidebarContent,MobileNav,TopBar,UserMenu}.tsx`; `components/ui/{Spinner,Skeleton,EmptyState,Avatar}.tsx`; `lib/user.ts`; pages for Notes/Documents/Settings; tests `RequireAuth.test.tsx` + `SidebarContent.test.tsx`.
+- **Changed:** `app/router.tsx` (RequireAuth branch), `AppShell.tsx` (rewrite), `DashboardPage.tsx` (+ test), `index.css` (drawer keyframes).
+- **Evidence:** typecheck clean · oxlint 0 · vitest `8 passed` (4 files) · build ok. Commit `34ff9f0`.
+- **Known:** prod JS chunk ~664 kB (Radix + lucide); code-split later.
+- **Status:** Level 5 done; ready for Level 6 once `DATABASE_URL` is available.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–4 complete. Commits: `27101e8`, `a551f35`, `299928e`, `c6d9b49`, `b3d09b4`.
-- **Backend:** boots with real `backend/.env`; `/api/v1/health` → 200; `/api/v1/auth/me` verifies JWTs (ES256 via JWKS + HS256 via secret); 7 tests pass; venv at `backend/.venv`.
-- **Frontend:** email + password sign-in works end-to-end (verified earlier); dev server was killed by an environment restart — restart with `npm run dev`.
-- **Next action:** implement **Level 5 — App shell + protected routes** (§5). A **design discussion is required first**.
+- **Where we are:** Levels 0–5 complete. Commits: `27101e8`, `a551f35`, `299928e`, `c6d9b49`, `b3d09b4`, `0c6a537`, `34ff9f0`.
+- **Backend:** boots with real `backend/.env`; `/health` 200; `/auth/me` verifies JWTs (ES256 via JWKS + HS256); 7 tests pass.
+- **Frontend:** warm shell live — guarded routes, sidebar + top bar, mobile drawer, user menu, dashboard. 8 tests pass; dev server `http://localhost:5173`.
+- **Next action:** implement **Level 6 — Folders backend + profiles** (§5); requires `DATABASE_URL`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
