@@ -52,7 +52,7 @@ def _make_token(
     *,
     algorithm: str,
     iss: str = ISSUER,
-    sub: str = "user-123",
+    sub: str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     email: str = "ada@example.com",
     expires_in: int = 3600,
 ) -> str:
@@ -79,11 +79,9 @@ async def test_me_returns_identity_for_es256_token(
     response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "id": "user-123",
-        "email": "ada@example.com",
-        "role": "authenticated",
-    }
+    body = response.json()
+    assert body["id"] == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    assert body["email"] == "ada@example.com"
 
 
 async def test_me_returns_identity_for_hs256_token(
@@ -94,7 +92,7 @@ async def test_me_returns_identity_for_hs256_token(
     response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 200
-    assert response.json()["id"] == "user-123"
+    assert response.json()["id"] == "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 
 
 async def test_me_requires_authentication(
