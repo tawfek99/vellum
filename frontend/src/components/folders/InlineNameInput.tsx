@@ -13,7 +13,7 @@ interface InlineNameInputProps {
 
 /**
  * Inline text input used to create or rename a folder.
- * Enter (or blur with a value) commits; Escape (or blur when empty) cancels.
+ * Enter (or blur with a changed value) commits; Escape (or blur unchanged) cancels.
  */
 export function InlineNameInput({
   initialValue = '',
@@ -28,15 +28,20 @@ export function InlineNameInput({
   const finished = useRef(false)
 
   useEffect(() => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
+    // Defer focus until after the triggering menu/dialog finishes its own
+    // focus handling, so the input isn't immediately blurred away.
+    const handle = window.setTimeout(() => {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }, 0)
+    return () => window.clearTimeout(handle)
   }, [])
 
   function finish(submit: boolean) {
     if (finished.current) return
     finished.current = true
     const trimmed = value.trim()
-    if (submit && trimmed) onSubmit(trimmed)
+    if (submit && trimmed && trimmed !== initialValue) onSubmit(trimmed)
     else onCancel()
   }
 
@@ -46,6 +51,7 @@ export function InlineNameInput({
       value={value}
       aria-label={ariaLabel}
       placeholder={placeholder}
+      spellCheck={false}
       onChange={(event) => setValue(event.target.value)}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {

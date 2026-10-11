@@ -159,8 +159,9 @@ export function FolderTree() {
         <button
           type="button"
           aria-label="New folder"
+          title="New folder"
           onClick={() => actions.startCreate(null)}
-          className="inline-flex size-7 items-center justify-center rounded-lg text-ink-500 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
+          className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-clay-600 transition-colors hover:bg-clay-600/10 hover:text-clay-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
         >
           <Plus className="size-4" aria-hidden="true" />
         </button>
@@ -412,6 +413,7 @@ function FolderMenuButton({ folder }: { folder: Folder }) {
         <DropdownMenu.Content
           align="start"
           sideOffset={4}
+          onCloseAutoFocus={(event) => event.preventDefault()}
           className="z-50 min-w-44 rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)]"
         >
           <MenuItem onSelect={() => a.startCreate(folder.id)}>New subfolder</MenuItem>

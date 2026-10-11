@@ -13,6 +13,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    // The project lives on a OneDrive-synced drive, where native file watching
+    // is unreliable; polling keeps hot-reload working.
+    watch: { usePolling: true },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
