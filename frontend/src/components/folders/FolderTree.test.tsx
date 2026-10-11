@@ -32,23 +32,36 @@ function setFolders(data: Folder[]) {
   })
 }
 
+function toggleLibrary() {
+  fireEvent.click(screen.getByRole('button', { name: 'My Library' }))
+}
+
 describe('FolderTree', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows an empty state when there are no folders', () => {
+  it('keeps the new-folder button visible whether collapsed or expanded', () => {
     setFolders([])
 
     render(<FolderTree />)
 
+    // Starts collapsed, but the + button is always present.
+    expect(screen.getByRole('button', { name: 'New folder' })).toBeInTheDocument()
+    expect(screen.queryByText(/no folders yet/i)).not.toBeInTheDocument()
+
+    toggleLibrary()
     expect(screen.getByText(/no folders yet/i)).toBeInTheDocument()
+
+    toggleLibrary()
+    expect(screen.getByRole('button', { name: 'New folder' })).toBeInTheDocument()
   })
 
   it('renders a nested tree and reveals children when expanded', () => {
     setFolders([folder('a', 'Work'), folder('b', 'Research', 'a')])
 
     render(<FolderTree />)
+    toggleLibrary()
 
     expect(screen.getByText('Work')).toBeInTheDocument()
     expect(screen.queryByText('Research')).not.toBeInTheDocument()

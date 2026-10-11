@@ -73,7 +73,7 @@ export function FolderTree() {
   const moveMutation = useMoveFolder()
   const deleteMutation = useDeleteFolder()
 
-  const [libraryOpen, setLibraryOpen] = useState(true)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -160,7 +160,10 @@ export function FolderTree() {
           type="button"
           aria-label="New folder"
           title="New folder"
-          onClick={() => actions.startCreate(null)}
+          onClick={() => {
+            setLibraryOpen(true)
+            actions.startCreate(null)
+          }}
           className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-clay-600 transition-colors hover:bg-clay-600/10 hover:text-clay-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
         >
           <Plus className="size-4" aria-hidden="true" />
