@@ -58,6 +58,8 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        # pgbouncer (Supabase transaction pooler) can't use prepared statements.
+        connect_args={"statement_cache_size": 0, "prepared_statement_cache_size": 0},
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

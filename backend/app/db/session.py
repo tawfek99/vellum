@@ -17,6 +17,9 @@ engine = create_async_engine(
     settings.database_url,
     echo=False,
     pool_pre_ping=True,
+    # Supabase's transaction pooler (pgbouncer) doesn't support server-side
+    # prepared statements, so disable both asyncpg's and SQLAlchemy's caches.
+    connect_args={"statement_cache_size": 0, "prepared_statement_cache_size": 0},
 )
 
 SessionLocal = async_sessionmaker(
