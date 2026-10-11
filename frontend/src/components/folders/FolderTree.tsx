@@ -140,38 +140,32 @@ export function FolderTree() {
 
   return (
     <div className="mt-3">
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => setLibraryOpen((open) => !open)}
-          aria-expanded={libraryOpen}
-          className="flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-ink-700 transition-colors hover:bg-parchment-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
-        >
-          <ChevronRight
-            className={cn(
-              'size-4 shrink-0 text-ink-400 transition-transform',
-              libraryOpen && 'rotate-90',
-            )}
-            aria-hidden="true"
-          />
-          My Library
-        </button>
-        <button
-          type="button"
-          aria-label="New folder"
-          title="New folder"
-          onClick={() => {
-            setLibraryOpen(true)
-            actions.startCreate(null)
-          }}
-          className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-clay-600 transition-colors hover:bg-clay-600/10 hover:text-clay-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
-        >
-          <Plus className="size-4" aria-hidden="true" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setLibraryOpen((open) => !open)}
+        aria-expanded={libraryOpen}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-ink-700 transition-colors hover:bg-parchment-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
+      >
+        <ChevronRight
+          className={cn(
+            'size-4 shrink-0 text-ink-400 transition-transform',
+            libraryOpen && 'rotate-90',
+          )}
+          aria-hidden="true"
+        />
+        My Library
+      </button>
 
       {libraryOpen ? (
         <div className="mt-1">
+          <button
+            type="button"
+            onClick={() => actions.startCreate(null)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
+          >
+            <Plus className="size-4 shrink-0 text-clay-600" aria-hidden="true" />
+            New folder
+          </button>
           {isLoading ? (
             <div className="space-y-1.5 px-3 py-2">
               <Skeleton className="h-6 w-36" />
@@ -208,9 +202,7 @@ export function FolderTree() {
                 ))}
 
                 {!isCreating && tree.length === 0 ? (
-                  <li className="px-3 py-2 text-xs text-ink-400">
-                    No folders yet — use ＋ to create one.
-                  </li>
+                  <li className="px-3 py-2 text-xs text-ink-400">No folders yet.</li>
                 ) : null}
               </ul>
             </FolderTreeContext.Provider>

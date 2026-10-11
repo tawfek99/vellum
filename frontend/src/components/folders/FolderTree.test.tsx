@@ -41,20 +41,19 @@ describe('FolderTree', () => {
     vi.clearAllMocks()
   })
 
-  it('keeps the new-folder button visible whether collapsed or expanded', () => {
+  it('only shows the new-folder action when the library is expanded', () => {
     setFolders([])
 
     render(<FolderTree />)
 
-    // Starts collapsed, but the + button is always present.
-    expect(screen.getByRole('button', { name: 'New folder' })).toBeInTheDocument()
+    // Collapsed by default: no new-folder action, no empty state.
+    expect(screen.queryByRole('button', { name: 'New folder' })).not.toBeInTheDocument()
     expect(screen.queryByText(/no folders yet/i)).not.toBeInTheDocument()
 
     toggleLibrary()
-    expect(screen.getByText(/no folders yet/i)).toBeInTheDocument()
 
-    toggleLibrary()
     expect(screen.getByRole('button', { name: 'New folder' })).toBeInTheDocument()
+    expect(screen.getByText(/no folders yet/i)).toBeInTheDocument()
   })
 
   it('renders a nested tree and reveals children when expanded', () => {
@@ -75,6 +74,7 @@ describe('FolderTree', () => {
     setFolders([])
 
     render(<FolderTree />)
+    toggleLibrary()
 
     fireEvent.click(screen.getByRole('button', { name: 'New folder' }))
     const input = screen.getByLabelText('New folder name')
