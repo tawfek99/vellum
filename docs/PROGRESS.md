@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464` (L6) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`, `6058910`.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -105,10 +105,12 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | Publishable key | `frontend/.env` | `VITE_SUPABASE_ANON_KEY` |
 | Secret key | `backend/.env` | `SUPABASE_SERVICE_ROLE_KEY` |
 | JWT secret | `backend/.env` (set) | `SUPABASE_JWT_SECRET` (legacy HS256 fallback) |
-| DB connection string | `backend/.env` (NEEDED before Level 6) | `DATABASE_URL` (use `postgresql+asyncpg://…`) |
+| DB connection string | `backend/.env` (set — Supabase transaction pooler, port 6543) | `DATABASE_URL` (`postgresql+asyncpg://…?ssl=require`) |
 | AI provider key | `backend/.env` (NEEDED before Level 13) | `AI_API_KEY` (+ `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`) |
 
 Both `.env` files are gitignored. `.env.example` files document the keys with no values.
+
+> **Pooler note:** the connection uses Supabase's **transaction pooler** (pgbouncer), which does not support server-side prepared statements. Both the app engine (`app/db/session.py`) and Alembic (`alembic/env.py`) set `statement_cache_size=0` + `prepared_statement_cache_size=0`. The URL also carries `?ssl=require`.
 
 ---
 
@@ -142,12 +144,13 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `8 passed` · build ok. Commit `34ff9f0`.
 - **Deferred:** folders in the sidebar (L7); real search (L15); the "New" action (L8–L11).
 
-### Level 6 — Folders (backend) + profiles — ✅ DONE (migration pending apply)
+### Level 6 — Folders (backend) + profiles — ✅ DONE & APPLIED
 - **Delivered:** `Profile` + `Folder` models (self-referential parent; unique `(user_id, parent_id, name)`); migration `fd6dea48a435`; `get_current_profile` (auto-create on first request); `/auth/me` GET + PATCH now persisted; folders service + `/folders` CRUD (rename/move with cycle + duplicate checks; delete re-parents children **up**); domain errors mapped to 4xx; `TimestampMixin`.
 - **Deps:** `aiosqlite` (dev only, for offline tests).
-- **Evidence:** 14 tests pass · ruff clean · migration applies (validated against SQLite) · API surface shows `/api/v1/folders`.
-- **Pending:** run `alembic upgrade head` against Supabase (needs `DATABASE_URL`).
-- **Commit:** `23a1464`.
+- **Applied:** `alembic upgrade head` run against Supabase — `profiles` + `folders` exist (version `fd6dea48a435`).
+- **Pooler fix:** transaction pooler (pgbouncer) can't use prepared statements → engine + alembic now set `statement_cache_size=0` + `prepared_statement_cache_size=0`.
+- **Evidence:** 14 tests pass · ruff clean · **live end-to-end check** (real Supabase user → token → `/auth/me` 200 → create/list folder) passed.
+- **Commits:** `23a1464`, `0a149fa`.
 
 ### Level 7 — Folders (UI)
 - **Goal:** full folder management in the sidebar.
@@ -301,17 +304,25 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Decisions:** folder delete moves children **up** to the parent; app-level duplicate-name check (409); move rejects cycles.
 - **Tests:** in-memory SQLite suite (`conftest.py` override) + `test_folders.py` + updated `test_auth.py` → **14 passed**. Migration validated by applying to a throwaway SQLite DB.
 - **Evidence:** ruff clean · 14 tests · API surface `/api/v1/folders` · backend restarted with the new routes.
-- **Pending:** apply the migration to Supabase (`alembic upgrade head`) once `DATABASE_URL` is in `backend/.env`.
 - **Commit:** `23a1464`.
+
+### 2026-10-11 — Level 6 migration applied to Supabase + live verification ✅
+- Received `DATABASE_URL` (transaction pooler, `eu-west-1`) + DB password; set in `backend/.env` with `?ssl=require`.
+- First `alembic upgrade head` hit the asyncpg/pgbouncer **prepared-statement** error → disabled the statement cache in `app/db/session.py` and `alembic/env.py` (`statement_cache_size=0`, `prepared_statement_cache_size=0`).
+- Migration applied: `profiles` + `folders` exist in Supabase (alembic version `fd6dea48a435`), verified via `pg_tables` + `information_schema`.
+- **Live end-to-end check** (temporary Supabase user created via Admin API + password sign-in, then removed): `GET /auth/me` → 200 (profile auto-created); `POST /folders` → 201; `GET /folders` → 200; cleanup 200.
+- Backend restarted with the Supabase DB config.
+- **Commit:** `0a149fa`. **Status:** Level 6 fully done and live; ready for Level 7 (Folders UI).
 
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–6 complete (Level 6's migration not yet applied to Supabase). Commits through `23a1464`.
-- **Backend:** running on `http://127.0.0.1:8000`; routes: `/api/v1/health`, `/auth/me` (GET+PATCH), `/folders` CRUD; JWT verification (ES256 JWKS + HS256); **14 tests pass**.
-- **Frontend:** running on `http://localhost:5173`; authenticated shell (sidebar, top bar, dashboard, drawer); 8 tests pass.
-- **Next action:** **apply the Level 6 migration to Supabase**, then implement **Level 7 — Folders UI** (§5). Both need `DATABASE_URL`.
+- **Where we are:** Levels 0–6 complete **and applied to Supabase**. Commits through `0a149fa`.
+- **Backend:** running on `http://127.0.0.1:8000`, connected to Supabase via the pooler; routes: `/api/v1/health`, `/auth/me` (GET+PATCH), `/folders` CRUD; JWT verification (ES256 JWKS + HS256); **14 tests pass**.
+- **Database:** Supabase Postgres; `profiles` + `folders` tables created. Live end-to-end (auth + folders) verified.
+- **Frontend:** running on `http://localhost:5173`; authenticated shell (sidebar, top bar, dashboard, drawer); **8 tests pass**.
+- **Next action:** implement **Level 7 — Folders UI** (§5). A **design discussion is required first**.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
@@ -319,12 +330,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Collect `DATABASE_URL`** → then run `alembic upgrade head` (creates `profiles` + `folders`) — required before Level 7.
-3. **Create Supabase Storage bucket `documents`** — required before Level 10.
-4. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
-5. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
-6. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
-7. **`backend/.env`** — created at Level 4 (gitignored); add `DATABASE_URL` when available.
+2. **Create Supabase Storage bucket `documents`** — required before Level 10.
+3. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
+4. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
+5. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+6. **`backend/.env`** — set (Supabase pooler + keys), gitignored.
+7. **Note:** DB password + secrets are in `backend/.env` only; never commit.
 
 ---
 
