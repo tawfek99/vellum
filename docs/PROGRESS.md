@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45` (L7) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`, `6058910`, `fd3543c`.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · docs: several `docs:` commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -320,6 +320,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Fixed:** `InlineNameInput` now defers focus until after the menu closes and won't resubmit an unchanged name; the folder menu uses `onCloseAutoFocus` preventDefault so the rename input keeps focus; the "＋" is now prominent (clay color + tooltip).
 - **Root cause found (important):** the project lives on a **OneDrive** drive, so Vite's native file watching was unreliable and the dev server **served stale code**. Fixed by restarting it and permanently by setting `server.watch.usePolling = true` in `vite.config.ts`.
 - **Tests:** 19 passing. **Commit:** `60dfb45`.
+
+### 2026-10-11 — Level 7 UX follow-up
+- Per user: the "＋" should **not** be always visible. Removed the header ＋ and added a **"New folder"** action row **inside** the expanded "My Library" section. The section stays **collapsed by default** (no auto-open on refresh).
+- **Commit:** `176dbea`.
 
 ---
 
