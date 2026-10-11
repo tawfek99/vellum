@@ -2,7 +2,7 @@ import type { ComponentPropsWithRef } from 'react'
 
 import { cn } from '@/lib/cn'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type ButtonSize = 'md' | 'lg'
 
 const VARIANTS: Record<ButtonVariant, string> = {
@@ -11,6 +11,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
   secondary:
     'border border-parchment-300 bg-parchment-50 text-ink-900 hover:bg-parchment-100 focus-visible:outline-clay-500',
   ghost: 'text-ink-700 hover:bg-parchment-100 focus-visible:outline-clay-500',
+  danger:
+    'bg-brick-600 text-parchment-50 shadow-sm hover:bg-brick-700 focus-visible:outline-brick-600',
 }
 
 const SIZES: Record<ButtonSize, string> = {

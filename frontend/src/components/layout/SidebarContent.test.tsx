@@ -3,6 +3,8 @@ import { MemoryRouter } from 'react-router'
 
 import { SidebarContent } from '@/components/layout/SidebarContent'
 
+vi.mock('@/components/folders/FolderTree', () => ({ FolderTree: () => null }))
+
 describe('SidebarContent', () => {
   it('renders the brand, primary navigation, and settings', () => {
     render(

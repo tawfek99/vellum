@@ -1,15 +1,8 @@
-import { useState } from 'react'
-import {
-  BookOpen,
-  ChevronDown,
-  Files,
-  LayoutDashboard,
-  NotebookText,
-  Settings,
-} from 'lucide-react'
+import { BookOpen, Files, LayoutDashboard, NotebookText, Settings } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { NavLink } from 'react-router'
 
+import { FolderTree } from '@/components/folders/FolderTree'
 import { cn } from '@/lib/cn'
 
 interface NavItem {
@@ -40,8 +33,6 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
  * `onNavigate` lets the drawer close itself when a link is chosen.
  */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const [libraryOpen, setLibraryOpen] = useState(true)
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-2.5 px-5">
@@ -51,36 +42,17 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </span>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-2" aria-label="Primary">
-        {PRIMARY_NAV.map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={navLinkClass} onClick={onNavigate}>
-            <Icon className="size-4 shrink-0" aria-hidden="true" />
-            {label}
-          </NavLink>
-        ))}
-
-        <div className="pt-3">
-          <button
-            type="button"
-            onClick={() => setLibraryOpen((open) => !open)}
-            aria-expanded={libraryOpen}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-700 transition-colors hover:bg-parchment-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
-          >
-            <ChevronDown
-              className={cn(
-                'size-4 shrink-0 text-ink-400 transition-transform',
-                !libraryOpen && '-rotate-90',
-              )}
-              aria-hidden="true"
-            />
-            My Library
-          </button>
-          {libraryOpen ? (
-            <p className="px-3 pb-1 pt-2 text-xs text-ink-400">
-              Folders arrive in an upcoming level.
-            </p>
-          ) : null}
+      <nav className="flex-1 overflow-y-auto px-3 py-2" aria-label="Primary">
+        <div className="space-y-1">
+          {PRIMARY_NAV.map(({ to, label, icon: Icon, end }) => (
+            <NavLink key={to} to={to} end={end} className={navLinkClass} onClick={onNavigate}>
+              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              {label}
+            </NavLink>
+          ))}
         </div>
+
+        <FolderTree />
       </nav>
 
       <div className="border-t border-parchment-200 p-3">
