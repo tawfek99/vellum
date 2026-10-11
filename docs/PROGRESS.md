@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (Levels 0–2) · `a551f35` (Level 3) · `299928e`, `c6d9b49` (docs) · `b3d09b4` (Level 4) · `0c6a537` (docs) · `34ff9f0` (Level 5).
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464` (L6) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -88,6 +88,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 8 | Design direction: warm paper/books | ✅ Confirmed | User-supplied login sketch |
 | 9 | JWT verification: JWKS (ES256/RS256) + legacy HS256 fallback | ✅ Implemented | Reads token `alg`; supabase_url derives JWKS + issuer |
 | 10 | App-shell layout adapted from user's "Libretto" reference | ✅ Confirmed | Sidebar + topbar + dashboard; **no AI panel on dashboard** (goes in document workspace, L13); keep terracotta accent |
+| 11 | Folder delete policy: children move up to the parent | ✅ Confirmed | No cascade delete; app-level duplicate-name check (409) + DB unique on (user_id, parent_id, name) |
 
 ### 3b. External services — Supabase
 
@@ -141,16 +142,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `8 passed` · build ok. Commit `34ff9f0`.
 - **Deferred:** folders in the sidebar (L7); real search (L15); the "New" action (L8–L11).
 
-### Level 6 — Folders (backend) + profiles
-- **Goal:** persist user profiles + nested folders; CRUD API. (First DB level.)
-- **Prereq:** `DATABASE_URL` in `backend/.env`.
-- **Backend:**
-  - `profiles` model (id = auth UUID PK, email, full_name, avatar_url, timestamps); auto-create on first authenticated request.
-  - `folders` model (id, user_id FK, name, `parent_id` self-FK nullable, timestamps; unique `(user_id, parent_id, name)`).
-  - Alembic migration(s); `services/folders.py`; `schemas/folder.py`; `api/v1/folders.py` (tree list, create, detail, patch, delete).
-  - `/auth/me` now reads the profile from the DB; add `PATCH /auth/me`.
-- **Policy decisions:** deleting a folder that has children → move children to root (or require empty — decide); moving validates no cycles; names unique per parent.
-- **Acceptance:** all queries scoped to `user_id`; tree listing correct; delete policy enforced; tests cover the policy.
+### Level 6 — Folders (backend) + profiles — ✅ DONE (migration pending apply)
+- **Delivered:** `Profile` + `Folder` models (self-referential parent; unique `(user_id, parent_id, name)`); migration `fd6dea48a435`; `get_current_profile` (auto-create on first request); `/auth/me` GET + PATCH now persisted; folders service + `/folders` CRUD (rename/move with cycle + duplicate checks; delete re-parents children **up**); domain errors mapped to 4xx; `TimestampMixin`.
+- **Deps:** `aiosqlite` (dev only, for offline tests).
+- **Evidence:** 14 tests pass · ruff clean · migration applies (validated against SQLite) · API surface shows `/api/v1/folders`.
+- **Pending:** run `alembic upgrade head` against Supabase (needs `DATABASE_URL`).
+- **Commit:** `23a1464`.
 
 ### Level 7 — Folders (UI)
 - **Goal:** full folder management in the sidebar.
@@ -222,22 +219,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 6 (Folders backend + profiles)
+## 5. Next Up — Level 7 (Folders UI)
 
-**Goal:** first database level — persist user profiles and nested folders, with a CRUD API.
+**Goal:** manage folders from the sidebar, backed by the Level 6 API.
 
-**Prerequisite:** `DATABASE_URL` in `backend/.env` (Supabase → **Connect** → URI → enable "Use connection pooler"; include the project's DB password). Convert to the `postgresql+asyncpg://…` form.
+**Prerequisite:** apply the Level 6 migration to Supabase (`alembic upgrade head`) — needs `DATABASE_URL`.
 
-**Backend:**
-- `profiles` model (id = auth UUID PK, email, full_name, avatar_url, timestamps); auto-create on first authenticated request (inside `get_current_user`).
-- `folders` model (id, user_id FK, name, `parent_id` self-FK nullable, timestamps; unique `(user_id, parent_id, name)`).
-- Alembic migration(s) via `alembic revision --autogenerate`; `services/folders.py`; `schemas/folder.py`; `api/v1/folders.py` (tree list, create, detail, patch, delete).
-- `/auth/me` now reads the profile from the DB; add `PATCH /auth/me`.
-- Tests: create/list/rename/delete + per-user scoping.
+**Frontend:**
+- `lib/api/client.ts` — typed fetch wrapper that injects the Supabase access token (`Authorization: Bearer`).
+- `features/folders/api.ts` + `hooks/useFolders.ts` (TanStack Query): `useFolders`, `useCreateFolder`, `useRenameFolder`, `useMoveFolder`, `useDeleteFolder` (optimistic updates).
+- `components/folders/FolderTree.tsx` — nested tree in the sidebar; create/rename/delete via Radix Dialog + DropdownMenu; empty/loading/error states; keyboard accessible.
+- `types/folder.ts` — shared TS types mirroring the backend schema.
+- Tests for the tree + mutations.
 
-**Policy decisions to settle:** deleting a folder that has children (move to root vs require empty); cycle prevention on move; unique name per parent.
+**Design discussion required first** (sidebar folder interactions) per the standing rule.
 
-**Acceptance:** folders persist, scoped per user; tree listing correct; delete policy enforced.
+**Acceptance:** create/rename/delete/move folders; state stays consistent after mutations; accessible via keyboard.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -299,14 +296,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Known:** prod JS chunk ~664 kB (Radix + lucide); code-split later.
 - **Status:** Level 5 done; ready for Level 6 once `DATABASE_URL` is available.
 
+### 2026-10-11 — Level 6 implementation (profiles + folders backend) ✅ (migration pending apply)
+- **Built:** `Profile` + `Folder` models (self-referential parent); `TimestampMixin`; migration `fd6dea48a435`; `get_current_profile` (auto-create); `/auth/me` now persisted (GET + PATCH); folders service + `/folders` CRUD; `DomainError` → 4xx handler; `aiosqlite` dev dep.
+- **Decisions:** folder delete moves children **up** to the parent; app-level duplicate-name check (409); move rejects cycles.
+- **Tests:** in-memory SQLite suite (`conftest.py` override) + `test_folders.py` + updated `test_auth.py` → **14 passed**. Migration validated by applying to a throwaway SQLite DB.
+- **Evidence:** ruff clean · 14 tests · API surface `/api/v1/folders` · backend restarted with the new routes.
+- **Pending:** apply the migration to Supabase (`alembic upgrade head`) once `DATABASE_URL` is in `backend/.env`.
+- **Commit:** `23a1464`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–5 complete. Commits: `27101e8`, `a551f35`, `299928e`, `c6d9b49`, `b3d09b4`, `0c6a537`, `34ff9f0`.
-- **Backend:** boots with real `backend/.env`; `/health` 200; `/auth/me` verifies JWTs (ES256 via JWKS + HS256); 7 tests pass.
-- **Frontend:** warm shell live — guarded routes, sidebar + top bar, mobile drawer, user menu, dashboard. 8 tests pass; dev server `http://localhost:5173`.
-- **Next action:** implement **Level 6 — Folders backend + profiles** (§5); requires `DATABASE_URL`.
+- **Where we are:** Levels 0–6 complete (Level 6's migration not yet applied to Supabase). Commits through `23a1464`.
+- **Backend:** running on `http://127.0.0.1:8000`; routes: `/api/v1/health`, `/auth/me` (GET+PATCH), `/folders` CRUD; JWT verification (ES256 JWKS + HS256); **14 tests pass**.
+- **Frontend:** running on `http://localhost:5173`; authenticated shell (sidebar, top bar, dashboard, drawer); 8 tests pass.
+- **Next action:** **apply the Level 6 migration to Supabase**, then implement **Level 7 — Folders UI** (§5). Both need `DATABASE_URL`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
@@ -314,12 +319,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Collect `DATABASE_URL`** (URI + connection pooler + DB password) — required before Level 6 (first table).
+2. **Collect `DATABASE_URL`** → then run `alembic upgrade head` (creates `profiles` + `folders`) — required before Level 7.
 3. **Create Supabase Storage bucket `documents`** — required before Level 10.
 4. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
 5. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
 6. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
-7. **`backend/.env`** — created at Level 4 (gitignored).
+7. **`backend/.env`** — created at Level 4 (gitignored); add `DATABASE_URL` when available.
 
 ---
 
