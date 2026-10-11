@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`, `6058910`.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71` (L7) · docs: `299928e`, `c6d9b49`, `0c6a537`, `dbf3883`, `6058910`.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -152,10 +152,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 14 tests pass · ruff clean · **live end-to-end check** (real Supabase user → token → `/auth/me` 200 → create/list folder) passed.
 - **Commits:** `23a1464`, `0a149fa`.
 
-### Level 7 — Folders (UI)
-- **Goal:** full folder management in the sidebar.
-- **Frontend:** folder tree; create/rename/delete/move via Radix Dialog + DropdownMenu; `hooks/useFolders.ts` (TanStack Query) with optimistic updates; empty/loading/error states.
-- **Acceptance:** create/rename/delete/move folders; keyboard + screen-reader accessible; state stays consistent after mutations.
+### Level 7 — Folders UI — ✅ DONE
+- **Delivered:** token-aware `lib/api/client.ts`; `features/folders/{api,tree}.ts`; `hooks/useFolders.ts` (optimistic create/rename/move/delete); interactive `components/folders/FolderTree.tsx` (nested, expand/collapse, inline create/rename, per-folder menu: new subfolder / rename / move to… / delete) + `InlineNameInput`; `ui/Modal` + `danger` Button variant; tree wired into the sidebar.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `15 passed` (7 files) · build ok. Commit `4c47f71`.
+- **Deferred:** folder navigation into contents (L9+); drag-and-drop (not chosen).
 
 ### Level 8 — Notes (backend)
 - **Goal:** notes persistence + API.
@@ -222,22 +222,16 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 7 (Folders UI)
+## 5. Next Up — Level 8 (Notes backend)
 
-**Goal:** manage folders from the sidebar, backed by the Level 6 API.
+**Goal:** notes persistence + API, scoped per user and optionally filed in a folder.
 
-**Prerequisite:** apply the Level 6 migration to Supabase (`alembic upgrade head`) — needs `DATABASE_URL`.
+**Backend:**
+- `Note` model (id, user_id FK, folder_id FK nullable, title, content markdown, is_pinned, timestamps) + migration.
+- `services/notes.py`; `schemas/note.py`; `api/v1/notes.py`: list (folder filter + pagination + text search), create, detail, patch, delete.
+- Tests: CRUD, filtering, per-user scoping.
 
-**Frontend:**
-- `lib/api/client.ts` — typed fetch wrapper that injects the Supabase access token (`Authorization: Bearer`).
-- `features/folders/api.ts` + `hooks/useFolders.ts` (TanStack Query): `useFolders`, `useCreateFolder`, `useRenameFolder`, `useMoveFolder`, `useDeleteFolder` (optimistic updates).
-- `components/folders/FolderTree.tsx` — nested tree in the sidebar; create/rename/delete via Radix Dialog + DropdownMenu; empty/loading/error states; keyboard accessible.
-- `types/folder.ts` — shared TS types mirroring the backend schema.
-- Tests for the tree + mutations.
-
-**Design discussion required first** (sidebar folder interactions) per the standing rule.
-
-**Acceptance:** create/rename/delete/move folders; state stays consistent after mutations; accessible via keyboard.
+**Acceptance:** notes persist, scoped to the user; list supports folder filter + pagination.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -314,15 +308,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Backend restarted with the Supabase DB config.
 - **Commit:** `0a149fa`. **Status:** Level 6 fully done and live; ready for Level 7 (Folders UI).
 
+### 2026-10-11 — Level 7 implementation (Folders UI) ✅
+- Built the interactive sidebar folder tree (chosen defaults: inline create/rename, "⋯" menu, move picker, delete confirm, optimistic updates).
+- **Added:** `lib/api/client.ts`; `features/folders/{api,tree}.ts`; `hooks/useFolders.ts`; `components/folders/{FolderTree,InlineNameInput}.tsx`; `components/ui/Modal.tsx`; jsdom polyfills in `test/setup.ts`; tests `tree.test.ts`, `client.test.ts`, `FolderTree.test.tsx`.
+- **Changed:** `components/layout/SidebarContent.tsx` (renders the tree), `components/ui/Button.tsx` (`danger` variant), `SidebarContent.test.tsx` (mocks the tree).
+- **Evidence:** typecheck clean · oxlint 0 · vitest `15 passed` (7 files) · build ok. Commit `4c47f71`.
+- **Status:** Level 7 done; ready for Level 8 (Notes backend).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–6 complete **and applied to Supabase**. Commits through `0a149fa`.
-- **Backend:** running on `http://127.0.0.1:8000`, connected to Supabase via the pooler; routes: `/api/v1/health`, `/auth/me` (GET+PATCH), `/folders` CRUD; JWT verification (ES256 JWKS + HS256); **14 tests pass**.
-- **Database:** Supabase Postgres; `profiles` + `folders` tables created. Live end-to-end (auth + folders) verified.
-- **Frontend:** running on `http://localhost:5173`; authenticated shell (sidebar, top bar, dashboard, drawer); **8 tests pass**.
-- **Next action:** implement **Level 7 — Folders UI** (§5). A **design discussion is required first**.
+- **Where we are:** Levels 0–7 complete. Commits through `4c47f71`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders` CRUD; **14 tests pass**.
+- **Frontend:** running on `:5173`; authenticated shell with an **interactive folder tree** (create/rename/move/delete, optimistic); **15 tests pass**.
+- **Next action:** implement **Level 8 — Notes backend** (§5).
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
