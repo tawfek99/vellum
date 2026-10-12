@@ -360,13 +360,20 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · backend `25 passed` · build ok. Commit `774202f`.
 - **Status:** Level 9 redesigned; ready for Level 10 (Documents backend).
 
+### 2026-10-13 — Level 9 design pass (user feedback) ✅
+- Editor now opens **full-page** again (removed the split workspace), per user.
+- **Torn-paper cards:** SVG `feDisplacementMap` rough/deckled edges + paper grain + deterministic subtle tilt (+ dashboard folder cards).
+- **DnD smoothness:** drag overlay snaps to the cursor grab point; the target folder **pulses** on drop as confirmation.
+- **Motion:** all dropdowns animate in (fade/scale), folder-tree expand animates, modals animate in; `prefers-reduced-motion` respected.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `e754a98`.
+
 ---
 
 ## 7. Current state / next action
 
 - **Where we are:** Levels 0–9 complete (Level 9 redesigned with paper cards + WYSIWYG editor). Commits through `774202f`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders` (with `note_count`), `/notes`; **25 tests pass**.
-- **Frontend:** running on `:5173`; shell + folder tree + **paper-card notes grid** + **split WYSIWYG editor** + **desk-card dashboard** + drag-and-drop; **26 tests pass**.
+- **Frontend:** running on `:5173`; shell + folder tree + **torn-paper notes grid** + **full-page WYSIWYG editor** + **desk-card dashboard** + smooth drag-and-drop; **26 tests pass**.
 - **Next action:** implement **Level 10 — Documents backend** (§5). Requires the Supabase Storage bucket `documents`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
