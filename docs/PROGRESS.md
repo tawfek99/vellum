@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf` (L9) · docs: several `docs:` commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · docs: several `docs:` commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -91,6 +91,8 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 11 | Folder delete policy: children move up to the parent | ✅ Confirmed | No cascade delete; app-level duplicate-name check (409) + DB unique on (user_id, parent_id, name) |
 | 12 | Notes backend: page_size 50 envelope, pinned-first, folder-delete unfiles notes | ✅ Confirmed | ILIKE search (FTS later at L15); blank title → "Untitled" |
 | 13 | Drag-and-drop (`@dnd-kit`): drag folders to re-nest, drag notes to file | ✅ Implemented | Keyboard sensor enabled; "Move to…" picker kept as accessible fallback |
+| 14 | Notes UI redesign: paper-card grid + split workspace | ✅ Confirmed | Inspired by user's torn-paper reference; adapted (soft shadows, not literal torn edges) |
+| 15 | Editor: TipTap WYSIWYG (markdown) + Lora serif, bookmark overflow menu, "Saved to notebook" stamp | ✅ Confirmed | Editor lazily code-split; folder cards show `note_count` |
 
 ### 3b. External services — Supabase
 
@@ -164,13 +166,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Decisions:** `page_size` default 50 with `{items,total,page,page_size}`; pinned-first then `updated_at desc`; deleting a folder **unfiles** its notes; case-insensitive `ILIKE` search; blank title → "Untitled".
 - **Evidence:** 24 backend tests pass · ruff clean · live e2e (create / move+pin / filter / search / delete) against Supabase. Commit `136cb75`.
 
-### Level 9 — Notes UI — ✅ DONE
-- **Delivered:** `features/notes/{api,NoteListItem,NotesPage,NoteEditorPage}`; `hooks/useNotes.ts`; `types/note.ts`; helpers `lib/date.ts`, `lib/mergeRefs.ts`, `hooks/useDebouncedValue.ts`.
-  - Notes list `(/notes)`: search, folder filter, new note, draggable cards.
-  - Full-page editor `(/notes/:id)`: debounced autosave + status, pin/unpin, move to folder, delete confirm.
-  - Dashboard "Recent notes"; clicking a sidebar folder navigates to `/notes?folder=<id>`.
-- **Drag & drop (`@dnd-kit`):** folders draggable + droppable (re-nest); notes draggable onto folders (file); root drop zone; keyboard sensor; "Move to…" picker kept.
-- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `aff98cf`.
+### Level 9 — Notes UI — ✅ DONE (+ redesigned)
+- **Base:** `features/notes/{api,NotesPanel,NotesWorkspace,NoteEditorPage,NoteCard}`; `hooks/useNotes.ts`; `types/note.ts`; helpers `lib/date.ts`, `lib/mergeRefs.ts`, `hooks/useDebouncedValue.ts`.
+- **Redesign (user feedback):** notes **grid of paper cards** (folder/date pills, overflow menu, soft shadows); **split workspace** (grid + editor pane; mobile swaps to editor); **journal editor** (Lora serif title, **TipTap WYSIWYG** markdown, bookmark **overflow menu** for pin/move/delete, **Copy link**, **"Saved to notebook ✓"** stamp, debounced autosave); **dashboard desk cards** (recent notes + folder cards with counts).
+- **Backend:** folders list returns `note_count`.
+- **Drag & drop (`@dnd-kit`):** folders re-nest, notes file into folders; animated overlay; "Move to…" picker kept.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · backend `25 passed` · build ok (editor code-split). Commits `aff98cf`, `774202f`.
 
 ### Level 10 — Document upload + extraction (backend)
 - **Goal:** accept PDFs, store them, extract + chunk text asynchronously.
@@ -350,13 +351,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `aff98cf`.
 - **Status:** Level 9 done; ready for Level 10 (Documents backend).
 
+### 2026-10-13 — Level 9 redesign (paper cards + WYSIWYG editor) ✅
+- User supplied a torn-paper card reference and chose: WYSIWYG (TipTap), Lora serif, folder `note_count`, "Copy link".
+- **Frontend:** new `NoteCard` (paper card: folder/date pills, overflow menu); `NotesPanel` (card grid); `NotesWorkspace` (split; mobile swaps to editor); redesigned `NoteEditorPage` (Lora title, TipTap WYSIWYG, bookmark overflow menu, Copy link, "Saved to notebook ✓" stamp); `RichTextEditor` (TipTap + `tiptap-markdown`); dashboard desk cards.
+- **Backend:** `FolderRead.note_count` + `count_notes_by_folder`.
+- **Deps:** `@tiptap/*`, `tiptap-markdown`; Lora font. Editor lazily code-split (own chunk).
+- **Changed:** `AppShell` (flex layout), `router.tsx` (lazy editor route), `index.css` (editor typography), `types/folder.ts`, dashboard/documents/settings pages, DnD overlay animation.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · backend `25 passed` · build ok. Commit `774202f`.
+- **Status:** Level 9 redesigned; ready for Level 10 (Documents backend).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–9 complete. Commits through `aff98cf`.
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`; **24 tests pass**.
-- **Frontend:** running on `:5173`; shell + folder tree + notes list/editor + drag-and-drop; **26 tests pass**.
+- **Where we are:** Levels 0–9 complete (Level 9 redesigned with paper cards + WYSIWYG editor). Commits through `774202f`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders` (with `note_count`), `/notes`; **25 tests pass**.
+- **Frontend:** running on `:5173`; shell + folder tree + **paper-card notes grid** + **split WYSIWYG editor** + **desk-card dashboard** + drag-and-drop; **26 tests pass**.
 - **Next action:** implement **Level 10 — Documents backend** (§5). Requires the Supabase Storage bucket `documents`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
