@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · docs: several `docs:` commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf` (L9) · docs: several `docs:` commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -90,6 +90,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 10 | App-shell layout adapted from user's "Libretto" reference | ✅ Confirmed | Sidebar + topbar + dashboard; **no AI panel on dashboard** (goes in document workspace, L13); keep terracotta accent |
 | 11 | Folder delete policy: children move up to the parent | ✅ Confirmed | No cascade delete; app-level duplicate-name check (409) + DB unique on (user_id, parent_id, name) |
 | 12 | Notes backend: page_size 50 envelope, pinned-first, folder-delete unfiles notes | ✅ Confirmed | ILIKE search (FTS later at L15); blank title → "Untitled" |
+| 13 | Drag-and-drop (`@dnd-kit`): drag folders to re-nest, drag notes to file | ✅ Implemented | Keyboard sensor enabled; "Move to…" picker kept as accessible fallback |
 
 ### 3b. External services — Supabase
 
@@ -163,10 +164,13 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Decisions:** `page_size` default 50 with `{items,total,page,page_size}`; pinned-first then `updated_at desc`; deleting a folder **unfiles** its notes; case-insensitive `ILIKE` search; blank title → "Untitled".
 - **Evidence:** 24 backend tests pass · ruff clean · live e2e (create / move+pin / filter / search / delete) against Supabase. Commit `136cb75`.
 
-### Level 9 — Notes (UI)
-- **Goal:** write and manage notes.
-- **Frontend:** note list; full-page editor (`features/notes/NoteEditor.tsx`); markdown textarea; debounced autosave (PATCH); delete; move to folder; pin; empty/loading/error states; keyboard-friendly.
-- **Acceptance:** create/edit/delete/autosave work; no data loss on navigation/unmount.
+### Level 9 — Notes UI — ✅ DONE
+- **Delivered:** `features/notes/{api,NoteListItem,NotesPage,NoteEditorPage}`; `hooks/useNotes.ts`; `types/note.ts`; helpers `lib/date.ts`, `lib/mergeRefs.ts`, `hooks/useDebouncedValue.ts`.
+  - Notes list `(/notes)`: search, folder filter, new note, draggable cards.
+  - Full-page editor `(/notes/:id)`: debounced autosave + status, pin/unpin, move to folder, delete confirm.
+  - Dashboard "Recent notes"; clicking a sidebar folder navigates to `/notes?folder=<id>`.
+- **Drag & drop (`@dnd-kit`):** folders draggable + droppable (re-nest); notes draggable onto folders (file); root drop zone; keyboard sensor; "Move to…" picker kept.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `aff98cf`.
 
 ### Level 10 — Document upload + extraction (backend)
 - **Goal:** accept PDFs, store them, extract + chunk text asynchronously.
@@ -223,21 +227,20 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 9 (Notes UI)
+## 5. Next Up — Level 10 (Documents backend)
 
-**Goal:** write and manage notes in the app.
+**Goal:** accept PDFs, store them, extract + chunk text asynchronously.
 
-**Frontend:**
-- `features/notes/api.ts` + `hooks/useNotes.ts` (TanStack Query, optimistic).
-- Notes list on `/notes`: pinned first, folder filter, search box, pagination.
-- Full-page note editor route `/notes/:id`: title input + markdown textarea + debounced autosave.
-- Actions: create, delete, move to folder, pin/unpin.
-- Empty/loading/error states; keyboard-friendly.
-- Dashboard "Recent activity" wired to recent notes.
+**Prereq:** create the Supabase Storage bucket `documents`.
 
-**Design discussion required first** (editor layout) per the standing rule.
+**Backend:**
+- Models: `documents`, `document_chunks`, `jobs` + migration.
+- Supabase Storage upload (service role) + signed-URL access.
+- `services/pdf/extractor.py` (PyMuPDF) + `chunker.py`; DB-backed job runner (`services/jobs.py`) started in the app lifespan.
+- `api/v1/documents.py`: upload (multipart), list, detail, patch, delete, status.
+- Tests: upload → extraction → status; failures recorded.
 
-**Acceptance:** create/edit/delete/autosave notes; changes persist; no data loss on navigation.
+**Acceptance:** upload PDF → status `ready` with extracted text + chunks; failures surfaced.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -339,14 +342,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 24 backend tests pass · ruff clean · migration applied to Supabase · live e2e (create / move+pin / filter / search / delete) passed; servers restarted.
 - **Commit:** `136cb75`. **Status:** Level 8 done; ready for Level 9 (Notes UI).
 
+### 2026-10-12 — Level 9 implementation (Notes UI + drag and drop) ✅
+- Built the notes UI and app-wide drag-and-drop (chosen: full-page editor).
+- **Added:** `types/note.ts`, `features/notes/{api,NoteListItem,NotesPage,NoteEditorPage}`, `hooks/{useNotes,useDebouncedValue}`, `lib/{date,mergeRefs}`, `features/dnd/{context,AppDndProvider}`; tests for NotesPage + NoteEditorPage.
+- **Changed:** `FolderTree.tsx` (DnD + navigate on folder click), `AppShell.tsx` (wrap in AppDndProvider), `router.tsx` (`/notes/:id`), `DashboardPage.tsx` (recent notes).
+- **Deps:** `@dnd-kit/core`.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `aff98cf`.
+- **Status:** Level 9 done; ready for Level 10 (Documents backend).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–8 complete. Commits through `136cb75`.
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes` CRUD; **24 tests pass**.
-- **Frontend:** running on `:5173`; authenticated shell + interactive folder tree; **19 tests pass**.
-- **Next action:** implement **Level 9 — Notes UI** (§5). A **design discussion is required first**.
+- **Where we are:** Levels 0–9 complete. Commits through `aff98cf`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`; **24 tests pass**.
+- **Frontend:** running on `:5173`; shell + folder tree + notes list/editor + drag-and-drop; **26 tests pass**.
+- **Next action:** implement **Level 10 — Documents backend** (§5). Requires the Supabase Storage bucket `documents`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
