@@ -3,10 +3,11 @@ import { MemoryRouter } from 'react-router'
 
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 
-const mocks = vi.hoisted(() => ({ useSession: vi.fn(), useNotes: vi.fn() }))
+const mocks = vi.hoisted(() => ({ useSession: vi.fn(), useNotes: vi.fn(), useFolders: vi.fn() }))
 
 vi.mock('@/features/auth/useSession', () => ({ useSession: mocks.useSession }))
 vi.mock('@/hooks/useNotes', () => ({ useNotes: mocks.useNotes }))
+vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
 function renderPage() {
   return render(
@@ -27,6 +28,7 @@ describe('DashboardPage', () => {
       data: { items: [], total: 0, page: 1, page_size: 5 },
       isLoading: false,
     })
+    mocks.useFolders.mockReturnValue({ data: [], isLoading: false })
   })
 
   it('greets the user and shows the empty states', () => {

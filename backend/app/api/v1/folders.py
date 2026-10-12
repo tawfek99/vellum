@@ -21,7 +21,18 @@ async def list_folders(
     profile: Annotated[Profile, Depends(get_current_profile)],
 ) -> list[FolderRead]:
     folders = await folder_service.list_folders(db, profile.id)
-    return [FolderRead.model_validate(folder) for folder in folders]
+    counts = await folder_service.count_notes_by_folder(db, profile.id)
+    return [
+        FolderRead(
+            id=folder.id,
+            name=folder.name,
+            parent_id=folder.parent_id,
+            note_count=counts.get(folder.id, 0),
+            created_at=folder.created_at,
+            updated_at=folder.updated_at,
+        )
+        for folder in folders
+    ]
 
 
 @router.post(

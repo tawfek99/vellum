@@ -17,6 +17,35 @@ vi.mock('@/hooks/useNotes', () => ({
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
+// The editor flushes unsaved changes via the raw API on unmount; stub it out.
+vi.mock('@/features/notes/api', () => ({
+  updateNote: vi.fn(() => Promise.resolve({})),
+}))
+
+// TipTap/ProseMirror doesn't run in jsdom; stand in with a plain textarea.
+vi.mock('@/components/notes/RichTextEditor', async () => {
+  const React = await import('react')
+  return {
+    RichTextEditor: ({
+      value,
+      onChange,
+    }: {
+      value: string
+      onChange: (markdown: string) => void
+    }) => {
+      const [text, setText] = React.useState(value)
+      return React.createElement('textarea', {
+        'aria-label': 'Note content',
+        value: text,
+        onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+          setText(event.target.value)
+          onChange(event.target.value)
+        },
+      })
+    },
+  }
+})
+
 function renderEditor() {
   return render(
     <MemoryRouter initialEntries={['/notes/n1']}>

@@ -10,7 +10,7 @@ export function SettingsPage() {
   const { user } = useSession()
 
   return (
-    <div className="space-y-6">
+    <div className="h-full space-y-6 overflow-y-auto pr-1">
       <div>
         <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-900">Settings</h1>
         <p className="mt-1 text-sm text-ink-500">Manage your account.</p>

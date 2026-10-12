@@ -92,3 +92,16 @@ async def test_folders_are_scoped_per_user(
     )
     response = await client.get(f"/api/v1/folders/{folder_id}")
     assert response.status_code == 404
+
+
+async def test_folder_list_includes_note_count(
+    client: httpx.AsyncClient, authenticated: None
+) -> None:
+    folder = (await client.post("/api/v1/folders", json={"name": "Work"})).json()
+    await client.post("/api/v1/notes", json={"title": "A", "folder_id": folder["id"]})
+    await client.post("/api/v1/notes", json={"title": "B", "folder_id": folder["id"]})
+    await client.post("/api/v1/notes", json={"title": "Unfiled"})
+
+    listing = (await client.get("/api/v1/folders")).json()
+    assert listing[0]["name"] == "Work"
+    assert listing[0]["note_count"] == 2

@@ -8,7 +8,7 @@
  */
 @theme {
   --font-sans: 'Noto Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-serif: 'Noto Serif', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-serif: 'Lora', ui-serif, Georgia, 'Times New Roman', serif;
 
   /* Page background */
   --color-cream-50: #fdfaf3;
@@ -70,4 +70,90 @@ body {
   to {
     transform: translateX(0);
   }
+}
+
+/* Note editor typography (TipTap / `note-prose`). */
+.note-prose {
+  color: var(--color-ink-800);
+  line-height: 1.85;
+  outline: none;
+}
+.note-prose p {
+  margin: 0 0 1em;
+}
+.note-prose h1 {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+  color: var(--color-ink-900);
+}
+.note-prose h2 {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 1.3em 0 0.4em;
+  color: var(--color-ink-900);
+}
+.note-prose h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 1.1em 0 0.3em;
+  color: var(--color-ink-900);
+}
+.note-prose ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 0 0 1em;
+}
+.note-prose ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin: 0 0 1em;
+}
+.note-prose li {
+  margin: 0.2em 0;
+}
+.note-prose blockquote {
+  border-left: 3px solid var(--color-parchment-300);
+  padding-left: 1em;
+  margin: 0 0 1em;
+  color: var(--color-ink-500);
+  font-style: italic;
+}
+.note-prose code {
+  background: var(--color-parchment-100);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.note-prose pre {
+  background: var(--color-ink-900);
+  color: var(--color-cream-50);
+  padding: 1em;
+  border-radius: 10px;
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+.note-prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.note-prose a {
+  color: var(--color-clay-600);
+  text-decoration: underline;
+}
+.note-prose hr {
+  border: none;
+  border-top: 1px solid var(--color-parchment-300);
+  margin: 1.5em 0;
+}
+.note-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-400);
+  float: left;
+  height: 0;
+  pointer-events: none;
 }

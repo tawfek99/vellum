@@ -1,18 +1,22 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 
-import { NotesPage } from '@/features/notes/NotesPage'
+import { NotesPanel } from '@/features/notes/NotesPanel'
 import type { Note } from '@/types/note'
 
 const mocks = vi.hoisted(() => ({
   useNotes: vi.fn(),
   useFolders: vi.fn(),
   create: vi.fn(),
+  update: vi.fn(),
+  remove: vi.fn(),
 }))
 
 vi.mock('@/hooks/useNotes', () => ({
   useNotes: mocks.useNotes,
   useCreateNote: () => ({ mutate: mocks.create, isPending: false }),
+  useUpdateNote: () => ({ mutate: mocks.update }),
+  useDeleteNote: () => ({ mutate: mocks.remove }),
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
@@ -20,7 +24,7 @@ function note(id: string, title: string): Note {
   return {
     id,
     title,
-    content: 'body',
+    content: 'body text',
     folder_id: null,
     is_pinned: false,
     created_at: '',
@@ -37,42 +41,41 @@ function setNotes(items: Note[]) {
   })
 }
 
-function renderPage() {
+function renderPanel() {
   return render(
     <MemoryRouter>
-      <NotesPage />
+      <NotesPanel />
     </MemoryRouter>,
   )
 }
 
-describe('NotesPage', () => {
+describe('NotesPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useFolders.mockReturnValue({ data: [] })
   })
 
-  it('lists notes', () => {
+  it('lists notes as cards', () => {
     setNotes([note('n1', 'First note')])
 
-    renderPage()
+    renderPanel()
 
-    expect(screen.getByRole('link', { name: 'First note' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /first note/i })).toBeInTheDocument()
   })
 
   it('shows an empty state with no notes', () => {
     setNotes([])
 
-    renderPage()
+    renderPanel()
 
     expect(screen.getByText(/no notes yet/i)).toBeInTheDocument()
   })
 
-  it('creates a new note', () => {
+  it('creates a note from the header action', () => {
     setNotes([])
 
-    renderPage()
-    const [headerNewNote] = screen.getAllByRole('button', { name: /new note/i })
-    fireEvent.click(headerNewNote as HTMLElement)
+    renderPanel()
+    fireEvent.click(screen.getByRole('button', { name: 'New' }))
 
     expect(mocks.create).toHaveBeenCalled()
   })

@@ -26,5 +26,6 @@ class FolderRead(BaseModel):
     id: UUID
     name: str
     parent_id: UUID | None = None
+    note_count: int = 0
     created_at: datetime
     updated_at: datetime

@@ -21,7 +21,7 @@ vi.mock('@/hooks/useFolders', () => ({
 }))
 
 function folder(id: string, name: string, parent_id: string | null = null): Folder {
-  return { id, name, parent_id, created_at: '', updated_at: '' }
+  return { id, name, parent_id, note_count: 0, created_at: '', updated_at: '' }
 }
 
 function setFolders(data: Folder[]) {

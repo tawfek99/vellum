@@ -44,6 +44,7 @@ export function useCreateFolder() {
       id: `temp-${crypto.randomUUID()}`,
       name: input.name,
       parent_id: input.parent_id ?? null,
+      note_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

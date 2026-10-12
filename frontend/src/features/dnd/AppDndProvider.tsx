@@ -68,9 +68,14 @@ export function AppDndProvider({ children }: { children: ReactNode }) {
         onDragCancel={() => setActiveDrag(null)}
       >
         {children}
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay
+          dropAnimation={{
+            duration: 200,
+            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.15)',
+          }}
+        >
           {activeDrag ? (
-            <div className="rounded-lg border border-parchment-300 bg-parchment-50 px-3 py-1.5 text-sm font-medium text-ink-800 shadow-[0_10px_30px_-12px_rgba(61,45,28,0.5)]">
+            <div className="inline-flex rotate-2 scale-[1.04] cursor-grabbing items-center rounded-xl border border-clay-500/40 bg-parchment-50 px-3.5 py-2 text-sm font-medium text-ink-800 shadow-[0_24px_46px_-18px_rgba(61,45,28,0.65)]">
               {activeDrag.label}
             </div>
           ) : null}

@@ -7,12 +7,13 @@ children up to the folder's parent (or to the root), so nothing is lost.
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, InvalidOperationError, NotFoundError
 from app.models.folder import Folder
+from app.models.note import Note
 from app.schemas.folder import FolderCreate, FolderUpdate
 
 # Re-exported for callers that want to catch a single base type.
@@ -22,6 +23,7 @@ __all__ = [
     "create_folder",
     "update_folder",
     "delete_folder",
+    "count_notes_by_folder",
 ]
 
 
@@ -30,6 +32,18 @@ async def list_folders(db: AsyncSession, user_id: uuid.UUID) -> Sequence[Folder]
         select(Folder).where(Folder.user_id == user_id).order_by(Folder.name)
     )
     return result.scalars().all()
+
+
+async def count_notes_by_folder(
+    db: AsyncSession, user_id: uuid.UUID
+) -> dict[uuid.UUID, int]:
+    """Number of notes in each of the user's folders (unfiled notes excluded)."""
+    rows = await db.execute(
+        select(Note.folder_id, func.count())
+        .where(Note.user_id == user_id, Note.folder_id.is_not(None))
+        .group_by(Note.folder_id)
+    )
+    return {folder_id: count for folder_id, count in rows.all() if folder_id is not None}
 
 
 async def get_folder(db: AsyncSession, user_id: uuid.UUID, folder_id: uuid.UUID) -> Folder:
