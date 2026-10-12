@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · docs: several `docs:` commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · docs: several `docs:` commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -89,6 +89,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 9 | JWT verification: JWKS (ES256/RS256) + legacy HS256 fallback | ✅ Implemented | Reads token `alg`; supabase_url derives JWKS + issuer |
 | 10 | App-shell layout adapted from user's "Libretto" reference | ✅ Confirmed | Sidebar + topbar + dashboard; **no AI panel on dashboard** (goes in document workspace, L13); keep terracotta accent |
 | 11 | Folder delete policy: children move up to the parent | ✅ Confirmed | No cascade delete; app-level duplicate-name check (409) + DB unique on (user_id, parent_id, name) |
+| 12 | Notes backend: page_size 50 envelope, pinned-first, folder-delete unfiles notes | ✅ Confirmed | ILIKE search (FTS later at L15); blank title → "Untitled" |
 
 ### 3b. External services — Supabase
 
@@ -157,10 +158,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `15 passed` (7 files) · build ok. Commit `4c47f71`.
 - **Deferred:** folder navigation into contents (L9+); drag-and-drop (not chosen).
 
-### Level 8 — Notes (backend)
-- **Goal:** notes persistence + API.
-- **Backend:** `notes` model (id, user_id, folder_id nullable, title, content markdown, is_pinned, timestamps); migration; `services/notes.py`; `api/v1/notes.py` (list with folder filter + pagination + text search; create/detail/patch/delete).
-- **Acceptance:** notes scoped to user; pagination + filter work; tests.
+### Level 8 — Notes (backend) — ✅ DONE & APPLIED
+- **Delivered:** `Note` model (title, markdown content, `is_pinned`, `folder_id` FK `ON DELETE SET NULL`); migration `263560731a3f`; `services/notes.py`; `schemas/note.py`; `api/v1/notes.py` (list w/ folder filter + search + pagination, create, detail, patch, delete).
+- **Decisions:** `page_size` default 50 with `{items,total,page,page_size}`; pinned-first then `updated_at desc`; deleting a folder **unfiles** its notes; case-insensitive `ILIKE` search; blank title → "Untitled".
+- **Evidence:** 24 backend tests pass · ruff clean · live e2e (create / move+pin / filter / search / delete) against Supabase. Commit `136cb75`.
 
 ### Level 9 — Notes (UI)
 - **Goal:** write and manage notes.
@@ -222,16 +223,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 8 (Notes backend)
+## 5. Next Up — Level 9 (Notes UI)
 
-**Goal:** notes persistence + API, scoped per user and optionally filed in a folder.
+**Goal:** write and manage notes in the app.
 
-**Backend:**
-- `Note` model (id, user_id FK, folder_id FK nullable, title, content markdown, is_pinned, timestamps) + migration.
-- `services/notes.py`; `schemas/note.py`; `api/v1/notes.py`: list (folder filter + pagination + text search), create, detail, patch, delete.
-- Tests: CRUD, filtering, per-user scoping.
+**Frontend:**
+- `features/notes/api.ts` + `hooks/useNotes.ts` (TanStack Query, optimistic).
+- Notes list on `/notes`: pinned first, folder filter, search box, pagination.
+- Full-page note editor route `/notes/:id`: title input + markdown textarea + debounced autosave.
+- Actions: create, delete, move to folder, pin/unpin.
+- Empty/loading/error states; keyboard-friendly.
+- Dashboard "Recent activity" wired to recent notes.
 
-**Acceptance:** notes persist, scoped to the user; list supports folder filter + pagination.
+**Design discussion required first** (editor layout) per the standing rule.
+
+**Acceptance:** create/edit/delete/autosave notes; changes persist; no data loss on navigation.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -325,14 +331,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Per user: the "＋" should **not** be always visible. Removed the header ＋ and added a **"New folder"** action row **inside** the expanded "My Library" section. The section stays **collapsed by default** (no auto-open on refresh).
 - **Commit:** `176dbea`.
 
+### 2026-10-12 — Level 8 implementation (Notes backend) ✅
+- Built the notes backend: model, migration, service, API, tests.
+- **Decisions:** `page_size` 50 envelope; pinned-first ordering; folder delete unfiles notes; ILIKE search; blank title → "Untitled".
+- **Added:** `models/note.py`, `schemas/note.py`, `services/notes.py`, `api/v1/notes.py`, migration `263560731a3f`, `tests/test_notes.py`.
+- **Changed:** `models/__init__.py`, `api/v1/router.py`.
+- **Evidence:** 24 backend tests pass · ruff clean · migration applied to Supabase · live e2e (create / move+pin / filter / search / delete) passed; servers restarted.
+- **Commit:** `136cb75`. **Status:** Level 8 done; ready for Level 9 (Notes UI).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–7 complete. Commits through `4c47f71`.
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders` CRUD; **14 tests pass**.
-- **Frontend:** running on `:5173`; authenticated shell with an **interactive folder tree** (create/rename/move/delete, optimistic); **15 tests pass**.
-- **Next action:** implement **Level 8 — Notes backend** (§5).
+- **Where we are:** Levels 0–8 complete. Commits through `136cb75`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes` CRUD; **24 tests pass**.
+- **Frontend:** running on `:5173`; authenticated shell + interactive folder tree; **19 tests pass**.
+- **Next action:** implement **Level 9 — Notes UI** (§5). A **design discussion is required first**.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
