@@ -5,6 +5,7 @@ can discover it via `Base.metadata`. Models are added level by level.
 """
 
 from app.models.folder import Folder
+from app.models.note import Note
 from app.models.profile import Profile
 
-__all__ = ["Folder", "Profile"]
+__all__ = ["Folder", "Note", "Profile"]
