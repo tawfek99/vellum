@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import {
   ChevronRight,
   Folder as FolderIcon,
@@ -9,11 +10,13 @@ import {
   Plus,
   RotateCw,
 } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router'
 
 import { InlineNameInput } from '@/components/folders/InlineNameInput'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useAppDnd, type DragData } from '@/features/dnd/context'
 import {
   buildFolderTree,
   collectDescendantIds,
@@ -27,13 +30,21 @@ import {
   useRenameFolder,
 } from '@/hooks/useFolders'
 import { cn } from '@/lib/cn'
+import { mergeRefs } from '@/lib/mergeRefs'
 import type { Folder } from '@/types/folder'
+
+// Shared drag data for folders and the root droppable.
+const folderDragData = (folder: Folder): DragData => ({
+  type: 'folder',
+  id: folder.id,
+  label: folder.name,
+})
 
 interface FolderTreeActions {
   expanded: Set<string>
   toggleExpanded: (id: string) => void
   selectedId: string | null
-  select: (id: string) => void
+  openFolder: (id: string) => void
   renamingId: string | null
   startRename: (folder: Folder) => void
   cancelRename: () => void
@@ -65,8 +76,12 @@ function flattenWithDepth(
   ])
 }
 
-/** Sidebar section: a fully interactive, nested folder tree. */
+/** Sidebar section: a fully interactive, nested, drag-and-droppable folder tree. */
 export function FolderTree() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const selectedId = searchParams.get('folder')
+
   const { data, isLoading, isError, refetch } = useFolders()
   const createMutation = useCreateFolder()
   const renameMutation = useRenameFolder()
@@ -75,7 +90,6 @@ export function FolderTree() {
 
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [creatingParentId, setCreatingParentId] = useState<string | null>(null)
@@ -99,7 +113,7 @@ export function FolderTree() {
         return next
       }),
     selectedId,
-    select: setSelectedId,
+    openFolder: (id) => navigate(`/notes?folder=${id}`),
     renamingId,
     startRename: (folder) => setRenamingId(folder.id),
     cancelRename: () => setRenamingId(null),
@@ -166,6 +180,7 @@ export function FolderTree() {
             <Plus className="size-4 shrink-0 text-clay-600" aria-hidden="true" />
             New folder
           </button>
+
           {isLoading ? (
             <div className="space-y-1.5 px-3 py-2">
               <Skeleton className="h-6 w-36" />
@@ -186,15 +201,15 @@ export function FolderTree() {
             </div>
           ) : (
             <FolderTreeContext.Provider value={actions}>
-              <ul className="space-y-0.5">
+              <RootDropZone>
                 {isCreating && creatingParentId === null ? (
-                  <li className="px-2 py-0.5">
+                  <div className="px-2 py-0.5">
                     <InlineNameInput
                       ariaLabel="New folder name"
                       onSubmit={actions.commitCreate}
                       onCancel={actions.cancelCreate}
                     />
-                  </li>
+                  </div>
                 ) : null}
 
                 {tree.map((node) => (
@@ -202,9 +217,9 @@ export function FolderTree() {
                 ))}
 
                 {!isCreating && tree.length === 0 ? (
-                  <li className="px-3 py-2 text-xs text-ink-400">No folders yet.</li>
+                  <p className="px-3 py-2 text-xs text-ink-400">No folders yet.</p>
                 ) : null}
-              </ul>
+              </RootDropZone>
             </FolderTreeContext.Provider>
           )}
 
@@ -224,7 +239,7 @@ export function FolderTree() {
         title="Delete folder?"
         description={
           deleteTarget
-            ? `“${deleteTarget.name}” will be deleted. Its subfolders move up to the parent.`
+            ? `“${deleteTarget.name}” will be deleted. Its subfolders move up to the parent and its notes become unfiled.`
             : undefined
         }
         footer={
@@ -307,8 +322,32 @@ export function FolderTree() {
   )
 }
 
+/** Droppable area that represents the library root (un-nesting / unfiling). */
+function RootDropZone({ children }: { children: ReactNode }) {
+  const { activeDrag } = useAppDnd()
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'folder-drop-root',
+    data: { folderId: null },
+  })
+
+  const highlight = isOver && activeDrag !== null
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'min-h-8 space-y-0.5 rounded-lg transition-colors',
+        highlight && 'bg-clay-600/10 ring-1 ring-clay-500/40',
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
 function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
   const a = useTreeActions()
+  const { activeDrag } = useAppDnd()
   const { folder, children } = node
   const hasChildren = children.length > 0
   const isExpanded = a.expanded.has(folder.id)
@@ -316,12 +355,39 @@ function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
   const isRenaming = a.renamingId === folder.id
   const isCreatingChild = a.isCreating && a.creatingParentId === folder.id
 
+  const isDragging = activeDrag?.type === 'folder' && activeDrag.id === folder.id
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `folder-drop-${folder.id}`,
+    data: { folderId: folder.id },
+  })
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+  } = useDraggable({
+    id: `folder-drag-${folder.id}`,
+    data: folderDragData(folder),
+    disabled: isRenaming,
+  })
+
+  const canDropHere =
+    activeDrag !== null &&
+    activeDrag.id !== folder.id &&
+    !(activeDrag.type === 'folder' && children.some((child) => child.folder.id === activeDrag.id))
+  const dropHighlight = isOver && canDropHere
+
   return (
     <li>
       <div
+        ref={mergeRefs(setDropRef, setDragRef)}
+        {...attributes}
+        {...listeners}
         className={cn(
-          'group flex items-center gap-0.5 rounded-lg pr-0.5',
+          'group flex items-center gap-0.5 rounded-lg pr-0.5 transition-colors',
           isSelected ? 'bg-parchment-200' : 'hover:bg-parchment-100',
+          dropHighlight && 'bg-clay-600/15 ring-1 ring-clay-500/50',
+          isDragging && 'opacity-40',
         )}
         style={{ paddingLeft: depth * 12 }}
       >
@@ -354,7 +420,7 @@ function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
         ) : (
           <button
             type="button"
-            onClick={() => a.select(folder.id)}
+            onClick={() => a.openFolder(folder.id)}
             className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pr-1 text-left text-sm text-ink-700 focus-visible:outline-2 focus-visible:outline-clay-500"
           >
             {isExpanded && hasChildren ? (

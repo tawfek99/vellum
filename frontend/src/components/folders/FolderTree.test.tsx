@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 
 import { FolderTree } from '@/components/folders/FolderTree'
 import type { Folder } from '@/types/folder'
@@ -32,6 +33,14 @@ function setFolders(data: Folder[]) {
   })
 }
 
+function renderTree() {
+  return render(
+    <MemoryRouter>
+      <FolderTree />
+    </MemoryRouter>,
+  )
+}
+
 function toggleLibrary() {
   fireEvent.click(screen.getByRole('button', { name: 'My Library' }))
 }
@@ -44,7 +53,7 @@ describe('FolderTree', () => {
   it('only shows the new-folder action when the library is expanded', () => {
     setFolders([])
 
-    render(<FolderTree />)
+    renderTree()
 
     // Collapsed by default: no new-folder action, no empty state.
     expect(screen.queryByRole('button', { name: 'New folder' })).not.toBeInTheDocument()
@@ -59,7 +68,7 @@ describe('FolderTree', () => {
   it('renders a nested tree and reveals children when expanded', () => {
     setFolders([folder('a', 'Work'), folder('b', 'Research', 'a')])
 
-    render(<FolderTree />)
+    renderTree()
     toggleLibrary()
 
     expect(screen.getByText('Work')).toBeInTheDocument()
@@ -73,7 +82,7 @@ describe('FolderTree', () => {
   it('creates a root folder from the inline input', () => {
     setFolders([])
 
-    render(<FolderTree />)
+    renderTree()
     toggleLibrary()
 
     fireEvent.click(screen.getByRole('button', { name: 'New folder' }))

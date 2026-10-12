@@ -6,6 +6,7 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentsPage } from '@/features/documents/DocumentsPage'
 import { NotFoundPage } from '@/features/misc/NotFoundPage'
+import { NoteEditorPage } from '@/features/notes/NoteEditorPage'
 import { NotesPage } from '@/features/notes/NotesPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <DashboardPage /> },
           { path: '/notes', element: <NotesPage /> },
+          { path: '/notes/:id', element: <NoteEditorPage /> },
           { path: '/documents', element: <DocumentsPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
