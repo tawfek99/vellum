@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { LibraryBig, NotebookText } from 'lucide-react'
 import { Link } from 'react-router'
 
@@ -7,6 +8,7 @@ import { useSession } from '@/features/auth/useSession'
 import { NoteCard } from '@/features/notes/NoteCard'
 import { useFolders } from '@/hooks/useFolders'
 import { useNotes } from '@/hooks/useNotes'
+import { tiltFor } from '@/lib/paper'
 import { getDisplayName } from '@/lib/user'
 
 export function DashboardPage() {
@@ -89,16 +91,20 @@ export function DashboardPage() {
               <Link
                 key={folder.id}
                 to={`/notes?folder=${folder.id}`}
-                className="group flex flex-col gap-6 rounded-2xl border border-parchment-200 bg-parchment-50 p-4 shadow-[0_12px_26px_-18px_rgba(61,45,28,0.55)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-20px_rgba(61,45,28,0.6)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
+                style={{ '--paper-tilt': `${tiltFor(folder.id)}deg` } as CSSProperties}
+                className="paper group block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
               >
-                <span className="flex size-10 items-center justify-center rounded-xl bg-clay-600/10 text-clay-600">
-                  <LibraryBig className="size-5" aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="font-serif text-base font-semibold text-ink-900">{folder.name}</p>
-                  <p className="mt-0.5 text-xs text-ink-500">
-                    {folder.note_count} {folder.note_count === 1 ? 'item' : 'items'}
-                  </p>
+                <span className="paper__bg" aria-hidden="true" />
+                <div className="paper__content flex flex-col gap-6 p-4">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-clay-600/10 text-clay-600">
+                    <LibraryBig className="size-5" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <p className="font-serif text-base font-semibold text-ink-900">{folder.name}</p>
+                    <p className="mt-0.5 text-xs text-ink-500">
+                      {folder.note_count} {folder.note_count === 1 ? 'item' : 'items'}
+                    </p>
+                  </div>
                 </div>
               </Link>
             ))}

@@ -27,7 +27,7 @@ export function UserMenu({ user }: { user: User }) {
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 min-w-[14rem] rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)]"
+          className="z-50 min-w-[14rem] origin-top rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)] data-[state=open]:animate-[dropdown-in_140ms_ease-out]"
         >
           <DropdownMenu.Label className="px-2.5 py-1.5 text-xs text-ink-500">
             {user.email}

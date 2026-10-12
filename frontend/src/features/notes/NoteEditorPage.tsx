@@ -168,7 +168,7 @@ function NoteEditor({ note }: { note: Note }) {
                 align="end"
                 sideOffset={6}
                 onCloseAutoFocus={(event) => event.preventDefault()}
-                className="z-50 min-w-48 rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)]"
+                className="z-50 min-w-48 origin-top rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)] data-[state=open]:animate-[dropdown-in_140ms_ease-out]"
               >
                 <MenuRow
                   onSelect={() => saveNote({ id: note.id, input: { is_pinned: !note.is_pinned } })}

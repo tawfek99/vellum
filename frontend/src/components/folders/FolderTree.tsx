@@ -347,7 +347,7 @@ function RootDropZone({ children }: { children: ReactNode }) {
 
 function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
   const a = useTreeActions()
-  const { activeDrag } = useAppDnd()
+  const { activeDrag, dropPulse } = useAppDnd()
   const { folder, children } = node
   const hasChildren = children.length > 0
   const isExpanded = a.expanded.has(folder.id)
@@ -376,6 +376,7 @@ function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
     activeDrag.id !== folder.id &&
     !(activeDrag.type === 'folder' && children.some((child) => child.folder.id === activeDrag.id))
   const dropHighlight = isOver && canDropHere
+  const pulse = dropPulse?.id === folder.id
 
   return (
     <li>
@@ -384,13 +385,20 @@ function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
         {...attributes}
         {...listeners}
         className={cn(
-          'group flex items-center gap-0.5 rounded-lg pr-0.5 transition-colors',
+          'group relative flex items-center gap-0.5 rounded-lg pr-0.5 transition-colors',
           isSelected ? 'bg-parchment-200' : 'hover:bg-parchment-100',
           dropHighlight && 'bg-clay-600/15 ring-1 ring-clay-500/50',
           isDragging && 'opacity-40',
         )}
         style={{ paddingLeft: depth * 12 }}
       >
+        {pulse && dropPulse ? (
+          <span
+            key={dropPulse.nonce}
+            className="drop-confirm pointer-events-none absolute inset-0 rounded-lg"
+            aria-hidden="true"
+          />
+        ) : null}
         {hasChildren ? (
           <button
             type="button"
@@ -446,7 +454,7 @@ function FolderNode({ node, depth }: { node: FolderNodeData; depth: number }) {
       ) : null}
 
       {hasChildren && isExpanded ? (
-        <ul className="space-y-0.5">
+        <ul className="animate-[expand-in_180ms_ease-out] space-y-0.5">
           {children.map((child) => (
             <FolderNode key={child.folder.id} node={child} depth={depth + 1} />
           ))}
@@ -475,7 +483,7 @@ function FolderMenuButton({ folder }: { folder: Folder }) {
           align="start"
           sideOffset={4}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="z-50 min-w-44 rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)]"
+          className="z-50 min-w-44 origin-top rounded-xl border border-parchment-200 bg-parchment-50 p-1.5 shadow-[0_16px_40px_-16px_rgba(61,45,28,0.35)] data-[state=open]:animate-[dropdown-in_140ms_ease-out]"
         >
           <MenuItem onSelect={() => a.startCreate(folder.id)}>New subfolder</MenuItem>
           <MenuItem onSelect={() => a.startRename(folder)}>Rename</MenuItem>

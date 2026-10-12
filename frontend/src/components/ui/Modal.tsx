@@ -32,7 +32,7 @@ export function Modal({
           className={cn(
             'fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2',
             'rounded-2xl border border-parchment-200 bg-parchment-50 p-6 shadow-[0_24px_60px_-30px_rgba(61,45,28,0.5)]',
-            'focus:outline-none',
+            'focus:outline-none data-[state=open]:animate-[modal-in_180ms_ease-out]',
             className,
           )}
         >

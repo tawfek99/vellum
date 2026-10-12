@@ -6,13 +6,13 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentsPage } from '@/features/documents/DocumentsPage'
 import { NotFoundPage } from '@/features/misc/NotFoundPage'
-import { NotesWorkspace } from '@/features/notes/NotesWorkspace'
+import { NotesPanel } from '@/features/notes/NotesPanel'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
 /**
  * Route table. `/login` is public; everything under `RequireAuth` needs a
  * session. The note editor is lazy-loaded so the heavy rich-text editor ships
- * in its own chunk.
+ * in its own chunk, and opens as a focused full-page view.
  */
 export const router = createBrowserRouter([
   {
@@ -26,18 +26,13 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { path: '/', element: <DashboardPage /> },
+          { path: '/notes', element: <NotesPanel /> },
           {
-            path: '/notes',
-            element: <NotesWorkspace />,
-            children: [
-              {
-                path: ':id',
-                lazy: () =>
-                  import('@/features/notes/NoteEditorPage').then((module) => ({
-                    Component: module.NoteEditorPage,
-                  })),
-              },
-            ],
+            path: '/notes/:id',
+            lazy: () =>
+              import('@/features/notes/NoteEditorPage').then((module) => ({
+                Component: module.NoteEditorPage,
+              })),
           },
           { path: '/documents', element: <DocumentsPage /> },
           { path: '/settings', element: <SettingsPage /> },

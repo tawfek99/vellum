@@ -18,6 +18,27 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Paper texture filters (used by the `.paper` cards). -->
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
+      <filter id="paper-rough" x="-15%" y="-15%" width="130%" height="130%">
+        <feTurbulence
+          type="fractalNoise"
+          baseFrequency="0.016 0.021"
+          numOctaves="2"
+          seed="9"
+          result="noise"
+        />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="noise"
+          scale="6"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </svg>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
