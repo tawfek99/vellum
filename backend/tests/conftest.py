@@ -43,6 +43,13 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest.fixture
+async def db_session(db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        yield session
+
+
+@pytest.fixture
 async def client(db_engine: AsyncEngine) -> AsyncGenerator[httpx.AsyncClient, None]:
     session_factory = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
 

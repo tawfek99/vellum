@@ -4,7 +4,8 @@ Run locally with:
     uvicorn app.main:app --reload
 """
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,15 +15,24 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import DomainError
 from app.db.session import engine
+from app.services.jobs import run_worker
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: nothing to do yet (the engine connects lazily).
+    # Startup: run the in-process background job worker.
+    stop_event = asyncio.Event()
+    worker = asyncio.create_task(run_worker(stop_event))
+
     yield
-    # Shutdown: release pooled database connections cleanly.
+
+    # Shutdown: stop the worker and release pooled DB connections.
+    stop_event.set()
+    worker.cancel()
+    with suppress(asyncio.CancelledError):
+        await worker
     await engine.dispose()
 
 
