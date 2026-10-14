@@ -173,16 +173,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Drag & drop (`@dnd-kit`):** folders re-nest, notes file into folders; animated overlay; "Move to…" picker kept.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · backend `25 passed` · build ok (editor code-split). Commits `aff98cf`, `774202f`.
 
-### Level 10 — Document upload + extraction (backend)
-- **Goal:** accept PDFs, store them, extract + chunk text asynchronously.
-- **Backend:**
-  - Models: `documents`, `document_chunks`, `jobs` + migration.
-  - Supabase Storage upload (service role), bucket `documents` (create bucket).
-  - `services/pdf/extractor.py` (PyMuPDF) + `chunker.py`.
-  - DB-backed job runner (`services/jobs.py`) started in app lifespan; `api/v1/documents.py` (upload, list, detail, patch, delete, status).
-- **Policy:** no text layer → flag `needs_ocr` (don't fail silently); record failures with message.
-- **Acceptance:** upload PDF → status `ready` with extracted text + chunks; failures visible; storage access abstracted for later swaps.
-- **Risks:** long extractions on free tier (jobs + polling) and scanned PDFs (no text).
+### Level 10 — Document upload + extraction (backend) — ✅ DONE & APPLIED
+- **Delivered:** `documents` / `document_chunks` / `jobs` models + migration `6447368fa155`; `services/storage.py` (Supabase Storage: upload / download / signed URL / delete); `services/pdf/{extractor,chunker}.py`; DB-backed job queue + in-process worker (started in the app lifespan); `/documents` API (multipart upload, list, detail, patch, delete, status, content URL).
+- **Storage:** private bucket `documents` created (programmatically). Scanned PDFs (no text layer) are flagged `needs_ocr`.
+- **Evidence:** 37 backend tests pass · ruff clean · migration applied · **live e2e** (upload → storage → worker extraction → `ready` 2 pages → signed URL → delete) passed.
+- **Deps:** `PyMuPDF`, `python-multipart`, `httpx` (runtime). Commit `5ad6058`.
 
 ### Level 11 — Documents UI
 - **Goal:** upload and track documents.
@@ -228,20 +223,17 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 10 (Documents backend)
+## 5. Next Up — Level 11 (Documents UI)
 
-**Goal:** accept PDFs, store them, extract + chunk text asynchronously.
+**Goal:** upload and track documents in the app.
 
-**Prereq:** create the Supabase Storage bucket `documents`.
+**Frontend:**
+- `features/documents/api.ts` + `hooks/useDocuments.ts` (TanStack Query).
+- Upload dropzone (drag/drop + file picker) with progress.
+- Documents list (paper cards), folder filter, status badges, **polling** while processing, retry/delete.
+- Wire the documents view into the app (sidebar / dashboard).
 
-**Backend:**
-- Models: `documents`, `document_chunks`, `jobs` + migration.
-- Supabase Storage upload (service role) + signed-URL access.
-- `services/pdf/extractor.py` (PyMuPDF) + `chunker.py`; DB-backed job runner (`services/jobs.py`) started in the app lifespan.
-- `api/v1/documents.py`: upload (multipart), list, detail, patch, delete, status.
-- Tests: upload → extraction → status; failures recorded.
-
-**Acceptance:** upload PDF → status `ready` with extracted text + chunks; failures surfaced.
+**Acceptance:** upload a PDF and watch it go `uploaded → ready`; errors surfaced.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
@@ -367,14 +359,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Motion:** all dropdowns animate in (fade/scale), folder-tree expand animates, modals animate in; `prefers-reduced-motion` respected.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `26 passed` · build ok. Commit `e754a98`.
 
+### 2026-10-14 — Level 10 implementation (Documents backend) ✅
+- Created the private Supabase **Storage bucket `documents`** (programmatically via the Storage API).
+- Built document models + migration, storage service, PyMuPDF extraction + chunker, DB-backed job queue + in-process worker, and the `/documents` API.
+- **Deps:** `PyMuPDF`, `python-multipart`, `httpx` (runtime).
+- **Evidence:** 37 backend tests · ruff clean · migration applied · live e2e (upload → extraction → `ready` 2 pages → signed URL → delete) passed.
+- **Commit:** `5ad6058`. **Status:** Level 10 done; ready for Level 11 (Documents UI).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–9 complete (Level 9 redesigned with paper cards + WYSIWYG editor). Commits through `774202f`.
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders` (with `note_count`), `/notes`; **25 tests pass**.
-- **Frontend:** running on `:5173`; shell + folder tree + **torn-paper notes grid** + **full-page WYSIWYG editor** + **desk-card dashboard** + smooth drag-and-drop; **26 tests pass**.
-- **Next action:** implement **Level 10 — Documents backend** (§5). Requires the Supabase Storage bucket `documents`.
+- **Where we are:** Levels 0–10 complete. Commits through `5ad6058`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
+- **Frontend:** running on `:5173`; shell + folder tree + torn-paper notes grid + full-page WYSIWYG editor + desk-card dashboard + drag-and-drop; **26 tests pass**.
+- **Next action:** implement **Level 11 — Documents UI** (§5).
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
@@ -382,11 +381,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Create Supabase Storage bucket `documents`** — required before Level 10.
-3. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
-4. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
-5. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
-6. **`backend/.env`** — set (Supabase pooler + keys), gitignored.
+2. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
+3. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
+4. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+5. **`backend/.env`** — set (Supabase pooler + keys), gitignored.
+6. **Storage bucket `documents`** — created (private).
 7. **Note:** DB password + secrets are in `backend/.env` only; never commit.
 
 ---
