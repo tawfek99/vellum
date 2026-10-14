@@ -93,6 +93,8 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 13 | Drag-and-drop (`@dnd-kit`): drag folders to re-nest, drag notes to file | ✅ Implemented | Keyboard sensor enabled; "Move to…" picker kept as accessible fallback |
 | 14 | Notes UI redesign: paper-card grid + split workspace | ✅ Confirmed | Inspired by user's torn-paper reference; adapted (soft shadows, not literal torn edges) |
 | 15 | Editor: TipTap WYSIWYG (markdown) + Lora serif, bookmark overflow menu, "Saved to notebook" stamp | ✅ Confirmed | Editor lazily code-split; folder cards show `note_count` |
+| 16 | Documents UI: paper cards + upload dropzone + status badges + polling | ✅ Confirmed | Scanned PDFs shown as "Scanned PDF" (OCR deferred); PDF viewer at L12 |
+| 17 | Auth: JWT verification leeway (30s) + JWKS warm-up | ✅ Implemented | Fixes intermittent 401 from PyJWT `iat` clock skew |
 
 ### 3b. External services — Supabase
 
@@ -179,10 +181,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 37 backend tests pass · ruff clean · migration applied · **live e2e** (upload → storage → worker extraction → `ready` 2 pages → signed URL → delete) passed.
 - **Deps:** `PyMuPDF`, `python-multipart`, `httpx` (runtime). Commit `5ad6058`.
 
-### Level 11 — Documents UI
-- **Goal:** upload and track documents.
-- **Frontend:** drag/drop + file-picker dropzone with progress; document list with folder filter; status badges + polling (`GET /documents/{id}/status`); retry on failure.
-- **Acceptance:** upload and watch status transition; errors/retry shown.
+### Level 11 — Documents UI — ✅ DONE
+- **Delivered:** `features/documents/{api,DocumentStatusBadge,DocumentCard,DocumentsPage}`; `hooks/useDocuments.ts`; `types/document.ts`; `lib/format.ts`; reusable `components/folders/FolderPickerDialog.tsx`.
+- **UX:** Upload button + **drag-and-drop** (drop overlay); torn-paper document cards with a **status badge** (Processing / Ready / **Scanned PDF** / Failed) and a menu (rename / move / delete); auto-**polling** while processing.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `31 passed` · build ok. Commit `1357468`.
 
 ### Level 12 — PDF viewer
 - **Goal:** read PDFs in-app.
@@ -223,23 +225,25 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 11 (Documents UI)
+## 5. Next Up — Level 12 (PDF viewer)
 
-**Goal:** upload and track documents in the app.
+**Goal:** read uploaded PDFs in-app.
 
 **Frontend:**
-- `features/documents/api.ts` + `hooks/useDocuments.ts` (TanStack Query).
-- Upload dropzone (drag/drop + file picker) with progress.
-- Documents list (paper cards), folder filter, status badges, **polling** while processing, retry/delete.
-- Wire the documents view into the app (sidebar / dashboard).
+- A document detail route `/documents/:id` with a `react-pdf` (pdf.js) viewer.
+- Fetch a short-lived signed URL from `GET /documents/{id}/content` and render with a **text layer**; page navigation + zoom.
+- Handle `needs_ocr` (no text layer) gracefully with a message.
+- Paper-styled document header + metadata alongside the viewer.
 
-**Acceptance:** upload a PDF and watch it go `uploaded → ready`; errors surfaced.
+**Backend:** already exposes `/documents/{id}/content` (signed URL) — no changes expected.
+
+**Acceptance:** a `ready` PDF renders in-app with selectable text; no storage credentials reach the client.
 
 ### Design system (locked for the app)
-- **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent. Tokens in `src/index.css` under `@theme`.
-- **Fonts:** Noto Serif (display/headings) + Noto Sans (body/UI), via Google Fonts in `index.html`.
-- **Login page:** warm card, heading "Welcome", sub-line "Sign in to continue.", email + password with show/hide toggle. No OAuth/sign-up/forgot-password (user decision).
-- **Reusable primitives:** `Button`, `Input`, `PasswordInput` (`src/components/ui/`), plus `cn()` helper (`src/lib/cn.ts`).
+- **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
+- **Fonts:** Lora (display/headings) + Noto Sans (body/UI), via Google Fonts in `index.html`.
+- **Paper cards:** `.paper` / `.paper__bg` / `.paper__content` (SVG `#paper-rough` filter + grain + tilt).
+- **Reusable primitives:** `Button`, `Input`, `PasswordInput`, `Modal`, `Spinner`, `Skeleton`, `EmptyState`, `Avatar`, `FolderPickerDialog` + `cn()`.
 
 > **Standing rule:** for any UI/visual work, STOP and present design choices to the user BEFORE implementing. Infrastructure/logic can proceed; look-and-feel is a joint decision.
 
@@ -366,14 +370,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 37 backend tests · ruff clean · migration applied · live e2e (upload → extraction → `ready` 2 pages → signed URL → delete) passed.
 - **Commit:** `5ad6058`. **Status:** Level 10 done; ready for Level 11 (Documents UI).
 
+### 2026-10-14 — Level 11 implementation (Documents UI) ✅
+- Built the documents UI matching the established paper look: upload button + **drag-and-drop** dropzone (drop overlay), torn-paper document cards.
+- **Status badges:** Processing / Ready / **Scanned PDF** (`needs_ocr`) / Failed; auto-**polling** while processing.
+- **Added:** `types/document.ts`, `features/documents/{api,DocumentStatusBadge,DocumentCard,DocumentsPage}`, `hooks/useDocuments.ts`, `lib/format.ts`, `components/folders/FolderPickerDialog.tsx`; sage/ochre status colors; multipart support in the API client.
+- **Also:** found + fixed an intermittent auth 401 (PyJWT `iat` clock skew → 30s leeway + JWKS warm-up) — commit `e49dd2d`.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `31 passed` · build ok. Commit `1357468`.
+- **Status:** Level 11 done; ready for Level 12 (PDF viewer).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–10 complete. Commits through `5ad6058`.
+- **Where we are:** Levels 0–11 complete. Commits through `1357468`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
-- **Frontend:** running on `:5173`; shell + folder tree + torn-paper notes grid + full-page WYSIWYG editor + desk-card dashboard + drag-and-drop; **26 tests pass**.
-- **Next action:** implement **Level 11 — Documents UI** (§5).
+- **Frontend:** running on `:5173`; shell + folder tree + torn-paper notes + WYSIWYG editor + desk dashboard + **documents UI (upload/cards/status/polling)** + drag-and-drop; **31 tests pass**.
+- **Next action:** implement **Level 12 — PDF viewer** (§5).
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
