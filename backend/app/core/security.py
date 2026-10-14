@@ -12,6 +12,7 @@ That keeps the backend correct regardless of how the project is configured.
 
 from __future__ import annotations
 
+import logging
 from typing import Annotated
 
 import jwt
@@ -23,12 +24,17 @@ from jwt import PyJWKClient
 from app.core.config import get_settings
 from app.schemas.auth import CurrentUser
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
 _HMAC_ALGORITHMS = {"HS256", "HS384", "HS512"}
 _ASYMMETRIC_ALGORITHMS = {"ES256", "ES384", "ES512", "RS256", "RS384", "RS512"}
+
+# Allow for small clock skew between Supabase and this server.
+_LEEWAY_SECONDS = 30
 
 # Lazily created so importing this module never performs network I/O.
 _jwks_client: PyJWKClient | None = None
@@ -39,6 +45,12 @@ def _get_jwks_client() -> PyJWKClient:
     if _jwks_client is None:
         _jwks_client = PyJWKClient(settings.supabase_jwks_url, cache_keys=True, lifespan=3600)
     return _jwks_client
+
+
+def warm_jwks() -> None:
+    """Fetch the JWKS once so the first real request isn't a cold fetch."""
+    if settings.supabase_url:
+        _get_jwks_client().get_jwk_set()
 
 
 def _unauthorized(detail: str) -> HTTPException:
@@ -82,9 +94,11 @@ async def get_current_user(
             algorithms=[alg],
             audience="authenticated",
             issuer=settings.supabase_issuer,
+            leeway=_LEEWAY_SECONDS,
             options={"require": ["exp", "sub"]},
         )
     except jwt.PyJWTError as exc:
+        logger.warning("JWT verification failed: %s", exc)
         raise _unauthorized("Invalid or expired token") from exc
 
     return CurrentUser(id=payload["sub"], email=payload.get("email"), role=payload.get("role"))

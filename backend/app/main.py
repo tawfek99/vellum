@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.exceptions import DomainError
+from app.core.security import warm_jwks
 from app.db.session import engine
 from app.services.jobs import run_worker
 
@@ -22,6 +23,10 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Warm the JWKS cache (best-effort) so the first auth request isn't a cold fetch.
+    with suppress(Exception):
+        await asyncio.to_thread(warm_jwks)
+
     # Startup: run the in-process background job worker.
     stop_event = asyncio.Event()
     worker = asyncio.create_task(run_worker(stop_event))
