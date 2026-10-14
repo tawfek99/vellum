@@ -15,6 +15,7 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   body?: unknown
+  form?: FormData
   signal?: AbortSignal
 }
 
@@ -29,13 +30,21 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   const token = data.session?.access_token
 
   const headers = new Headers()
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
+
+  let fetchBody: BodyInit | undefined
+  if (options.form !== undefined) {
+    // Let the browser set the multipart boundary.
+    fetchBody = options.form
+  } else if (options.body !== undefined) {
+    headers.set('Content-Type', 'application/json')
+    fetchBody = JSON.stringify(options.body)
+  }
 
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: fetchBody,
     signal: options.signal,
   })
 

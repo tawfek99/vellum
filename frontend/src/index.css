@@ -36,6 +36,12 @@
   /* Errors (warm brick) */
   --color-brick-50: #fbeeec;
   --color-brick-600: #b23a2f;
+
+  /* Status (warm sage success / ochre warning) */
+  --color-sage-50: #eef3ea;
+  --color-sage-600: #5c7a4f;
+  --color-ochre-50: #f8efdb;
+  --color-ochre-600: #a9791f;
 }
 
 html,
