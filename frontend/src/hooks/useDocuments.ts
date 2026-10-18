@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
 
 import {
+  askQuestion,
   createSummary,
   deleteDocument,
   getDocument,
   getDocumentContent,
+  getQa,
   getSummary,
   listDocuments,
   updateDocument,
@@ -14,6 +16,7 @@ import {
   type UploadDocumentInput,
 } from '@/features/documents/api'
 import { isProcessing, type DocumentList, type DocumentUpdateInput } from '@/types/document'
+import { isQaProcessing, type QaHistory } from '@/types/qa'
 import { isSummaryProcessing, type Summary } from '@/types/summary'
 
 export const documentsQueryKey = (params: ListDocumentsParams = {}): QueryKey => [
@@ -102,6 +105,30 @@ export function useCreateSummary() {
     mutationFn: (documentId: string) => createSummary(documentId),
     onSuccess: (summary, documentId) => {
       queryClient.setQueryData(['document-summary', documentId], summary)
+    },
+  })
+}
+
+export function useQa(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['document-qa', id],
+    queryFn: () => getQa(id as string),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data as QaHistory | undefined
+      const processing = data?.items.some((item) => isQaProcessing(item.status))
+      return processing ? 2000 : false
+    },
+  })
+}
+
+export function useAskQuestion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, question }: { id: string; question: string }) =>
+      askQuestion(id, question),
+    onSuccess: (_exchange, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: ['document-qa', id] })
     },
   })
 }

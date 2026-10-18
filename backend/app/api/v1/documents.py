@@ -17,8 +17,10 @@ from app.schemas.document import (
     DocumentStatus,
     DocumentUpdate,
 )
+from app.schemas.qa import AskQuestion, QaExchangeRead, QaHistory
 from app.schemas.summary import SummaryKeyPoint, SummaryRead
 from app.services import documents as document_service
+from app.services import qa as qa_service
 from app.services import storage
 from app.services import summaries as summary_service
 
@@ -199,3 +201,47 @@ async def get_summary(
     await document_service.get_document(db, profile.id, document_id)
     generation = await summary_service.get_latest_summary(db, profile.id, document_id)
     return _to_summary_read(generation)
+
+
+def _to_exchange_read(exchange) -> QaExchangeRead:  # noqa: ANN001
+    return QaExchangeRead(
+        id=exchange.id,
+        question=exchange.question,
+        answer=exchange.answer,
+        status=exchange.status,
+        error=exchange.error,
+        pages=exchange.pages,
+        created_at=exchange.created_at,
+    )
+
+
+@router.post(
+    "/{document_id}/ask",
+    response_model=QaExchangeRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ask a question about a document",
+)
+async def ask_question(
+    document_id: uuid.UUID,
+    payload: AskQuestion,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> QaExchangeRead:
+    exchange = await qa_service.create_question(
+        db, profile.id, document_id, payload.question
+    )
+    return _to_exchange_read(exchange)
+
+
+@router.get(
+    "/{document_id}/qa",
+    response_model=QaHistory,
+    summary="Get the Q&A history for a document",
+)
+async def get_qa_history(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> QaHistory:
+    exchanges = await qa_service.get_history(db, profile.id, document_id)
+    return QaHistory(items=[_to_exchange_read(exchange) for exchange in exchanges])

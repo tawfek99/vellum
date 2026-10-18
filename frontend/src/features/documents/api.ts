@@ -1,5 +1,6 @@
 import { apiFetch } from '@/lib/api/client'
 import type { Document, DocumentContent, DocumentList, DocumentUpdateInput } from '@/types/document'
+import type { QaExchange, QaHistory } from '@/types/qa'
 import type { Summary } from '@/types/summary'
 
 export interface ListDocumentsParams {
@@ -55,4 +56,15 @@ export function getSummary(id: string): Promise<Summary> {
 
 export function createSummary(id: string): Promise<Summary> {
   return apiFetch<Summary>(`/documents/${id}/summary`, { method: 'POST' })
+}
+
+export function getQa(id: string): Promise<QaHistory> {
+  return apiFetch<QaHistory>(`/documents/${id}/qa`)
+}
+
+export function askQuestion(id: string, question: string): Promise<QaExchange> {
+  return apiFetch<QaExchange>(`/documents/${id}/ask`, {
+    method: 'POST',
+    body: { question },
+  })
 }

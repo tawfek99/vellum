@@ -11,8 +11,8 @@ import re
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.ai.base import KeyPoint, SummaryResult
-from app.ai.prompts import SUMMARY_SYSTEM, summary_user_prompt
+from app.ai.base import AnswerResult, KeyPoint, SummaryResult
+from app.ai.prompts import QA_SYSTEM, SUMMARY_SYSTEM, qa_user_prompt, summary_user_prompt
 
 _FENCE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$", re.MULTILINE)
 
@@ -25,6 +25,11 @@ class _KeyPointPayload(BaseModel):
 class _SummaryPayload(BaseModel):
     summary: str
     key_points: list[_KeyPointPayload] = []
+
+
+class _AnswerPayload(BaseModel):
+    answer: str
+    pages: list[int] = []
 
 
 def _extract_json(raw: str) -> dict[str, object] | None:
@@ -102,3 +107,24 @@ class OpenAICompatibleProvider:
                 pass
         # Fall back to a plain-text summary if the model didn't return JSON.
         return SummaryResult(summary=raw.strip())
+
+    async def answer_question(
+        self,
+        question: str,
+        context: str,
+        history: list[dict[str, str]],
+    ) -> AnswerResult:
+        raw = await self._complete(
+            system=QA_SYSTEM,
+            user=qa_user_prompt(question, context, history),
+        )
+        payload = _extract_json(raw)
+        if payload is not None:
+            try:
+                parsed = _AnswerPayload.model_validate(payload)
+                pages = sorted({page for page in parsed.pages if page > 0})
+                return AnswerResult(answer=parsed.answer.strip(), pages=pages)
+            except ValidationError:
+                pass
+        # Fall back to a plain-text answer if the model didn't return JSON.
+        return AnswerResult(answer=raw.strip())

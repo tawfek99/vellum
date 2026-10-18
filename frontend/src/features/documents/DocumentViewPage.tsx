@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Maximize2,
+  MessageCircle,
   Minimize2,
   Sparkles,
   ZoomIn,
@@ -17,11 +18,14 @@ import 'react-pdf/dist/Page/TextLayer.css'
 
 import { Spinner } from '@/components/ui/Spinner'
 import { DocumentStatusBadge } from '@/features/documents/DocumentStatusBadge'
+import { QaPanel } from '@/features/documents/QaPanel'
 import { SummaryPanel } from '@/features/documents/SummaryPanel'
 import {
+  useAskQuestion,
   useCreateSummary,
   useDocument,
   useDocumentContent,
+  useQa,
   useSummary,
 } from '@/hooks/useDocuments'
 import { useFolders } from '@/hooks/useFolders'
@@ -32,6 +36,8 @@ const MIN_ZOOM = 0.5
 const MAX_ZOOM = 3
 const ZOOM_STEP = 1.15
 
+type AiPanel = 'summary' | 'qa' | null
+
 const toolbarButton =
   'inline-flex size-8 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-clay-500'
 
@@ -41,10 +47,14 @@ export function DocumentViewPage() {
   const content = useDocumentContent(id, Boolean(document))
   const foldersQuery = useFolders()
   const [fullscreen, setFullscreen] = useState(false)
-  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [panel, setPanel] = useState<AiPanel>(null)
   const [jumpTarget, setJumpTarget] = useState<{ page: number; nonce: number } | null>(null)
+  const summaryOpen = panel === 'summary'
+  const qaOpen = panel === 'qa'
   const summaryQuery = useSummary(id, summaryOpen)
+  const qaQuery = useQa(id, qaOpen)
   const createSummary = useCreateSummary()
+  const askQuestion = useAskQuestion()
 
   if (isLoading) {
     return (
@@ -82,10 +92,16 @@ export function DocumentViewPage() {
       : createSummary.error
         ? 'Something went wrong while summarizing.'
         : null
+  const askError =
+    askQuestion.error instanceof Error
+      ? askQuestion.error.message
+      : askQuestion.error
+        ? 'Something went wrong while asking.'
+        : null
 
   function handleJumpToPage(page: number) {
     setJumpTarget({ page, nonce: Date.now() })
-    if (!window.matchMedia('(min-width: 1024px)').matches) setSummaryOpen(false)
+    if (!window.matchMedia('(min-width: 1024px)').matches) setPanel(null)
   }
 
   return (
@@ -114,13 +130,24 @@ export function DocumentViewPage() {
           />
           <button
             type="button"
-            onClick={() => setSummaryOpen((open) => !open)}
+            onClick={() => setPanel((current) => (current === 'summary' ? null : 'summary'))}
             aria-pressed={summaryOpen}
             data-active={summaryOpen}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-clay-500 data-[active=true]:bg-parchment-200"
           >
             <Sparkles className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">Summary</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPanel((current) => (current === 'qa' ? null : 'qa'))}
+            aria-label="Ask about this document"
+            aria-pressed={qaOpen}
+            data-active={qaOpen}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-clay-500 data-[active=true]:bg-parchment-200"
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Ask</span>
           </button>
           <button
             type="button"
@@ -162,25 +189,40 @@ export function DocumentViewPage() {
             <PdfViewer
               url={url}
               jumpTarget={jumpTarget}
-              layoutKey={summaryOpen ? 'with-panel' : 'full'}
+              layoutKey={panel ? 'with-panel' : 'full'}
               onToggleFullscreen={() => setFullscreen(true)}
             />
           )}
         </div>
 
-        {summaryOpen && !fullscreen ? (
+        {panel && !fullscreen ? (
           <aside className="fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4 lg:static lg:z-auto lg:w-[480px] lg:shrink-0 lg:overflow-visible lg:bg-transparent lg:p-0">
-            <SummaryPanel
-              summary={summaryQuery.data}
-              isLoading={summaryQuery.isLoading}
-              isError={summaryQuery.isError}
-              documentStatus={document.processing_status}
-              isRequesting={createSummary.isPending}
-              requestError={requestError}
-              onClose={() => setSummaryOpen(false)}
-              onRetry={() => createSummary.mutate(id as string)}
-              onJumpToPage={handleJumpToPage}
-            />
+            {panel === 'summary' ? (
+              <SummaryPanel
+                summary={summaryQuery.data}
+                isLoading={summaryQuery.isLoading}
+                isError={summaryQuery.isError}
+                documentStatus={document.processing_status}
+                isRequesting={createSummary.isPending}
+                requestError={requestError}
+                onClose={() => setPanel(null)}
+                onRetry={() => createSummary.mutate(id as string)}
+                onJumpToPage={handleJumpToPage}
+              />
+            ) : (
+              <QaPanel
+                history={qaQuery.data}
+                isLoading={qaQuery.isLoading}
+                isError={qaQuery.isError}
+                documentStatus={document.processing_status}
+                isAsking={askQuestion.isPending}
+                askError={askError}
+                onAsk={(question) => askQuestion.mutate({ id: id as string, question })}
+                onClose={() => setPanel(null)}
+                onJumpToPage={handleJumpToPage}
+                onRetry={() => void qaQuery.refetch()}
+              />
+            )}
           </aside>
         ) : null}
       </div>

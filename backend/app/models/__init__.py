@@ -10,6 +10,7 @@ from app.models.folder import Folder
 from app.models.job import Job
 from app.models.note import Note
 from app.models.profile import Profile
+from app.models.qa import QAMessage
 
 __all__ = [
     "AIGeneration",
@@ -19,4 +20,5 @@ __all__ = [
     "Job",
     "Note",
     "Profile",
+    "QAMessage",
 ]

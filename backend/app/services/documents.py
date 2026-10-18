@@ -187,4 +187,9 @@ async def handle_job(db: AsyncSession, job: Job) -> dict[str, Any]:
         from app.services.summaries import handle_summarize_job
 
         return await handle_summarize_job(db, job)
+    if job.type == "answer_document_question":
+        # Local import avoids a circular dependency (qa uses documents).
+        from app.services.qa import handle_answer_job
+
+        return await handle_answer_job(db, job)
     raise ValueError(f"Unknown job type: {job.type}")

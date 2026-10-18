@@ -1,14 +1,17 @@
 import type { ReactNode } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 
 import { DocumentViewPage } from '@/features/documents/DocumentViewPage'
 import type { Document } from '@/types/document'
+import type { QaHistory } from '@/types/qa'
 
 const mocks = vi.hoisted(() => ({
   useDocument: vi.fn(),
   useDocumentContent: vi.fn(),
   useFolders: vi.fn(),
+  useQa: vi.fn(),
+  useAskQuestion: vi.fn(),
 }))
 
 vi.mock('@/lib/pdf', () => ({}))
@@ -41,6 +44,8 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDocumentContent: mocks.useDocumentContent,
   useSummary: () => ({ data: { status: 'none' }, isLoading: false, isError: false }),
   useCreateSummary: () => ({ mutate: vi.fn() }),
+  useQa: mocks.useQa,
+  useAskQuestion: mocks.useAskQuestion,
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
@@ -87,6 +92,17 @@ describe('DocumentViewPage', () => {
       isLoading: false,
       isError: false,
     })
+    mocks.useQa.mockReturnValue({
+      data: { items: [] } satisfies QaHistory,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+    mocks.useAskQuestion.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      error: null,
+    })
   })
 
   it('renders the PDF pages when ready', async () => {
@@ -129,5 +145,60 @@ describe('DocumentViewPage', () => {
     renderPage()
 
     expect(screen.getByText(/document not found/i)).toBeInTheDocument()
+  })
+
+  it('opens the Q&A panel and sends a question', () => {
+    mocks.useDocument.mockReturnValue({
+      data: document_('ready'),
+      isLoading: false,
+      isError: false,
+    })
+    const mutate = vi.fn()
+    mocks.useAskQuestion.mockReturnValue({ mutate, isPending: false, error: null })
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /ask/i }))
+    expect(screen.getByText(/ask anything about this document/i)).toBeInTheDocument()
+
+    const input = screen.getByLabelText(/ask a question about this document/i)
+    fireEvent.change(input, { target: { value: 'What is this about?' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(mutate).toHaveBeenCalledWith({ id: 'd1', question: 'What is this about?' })
+  })
+
+  it('renders Q&A history with page citations', () => {
+    mocks.useDocument.mockReturnValue({
+      data: document_('ready'),
+      isLoading: false,
+      isError: false,
+    })
+    mocks.useQa.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 'q1',
+            question: 'What is the goal?',
+            answer: 'To ship a working product.',
+            status: 'succeeded',
+            error: null,
+            pages: [2],
+            created_at: '',
+          },
+        ],
+      } satisfies QaHistory,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /ask/i }))
+
+    expect(screen.getByText('What is the goal?')).toBeInTheDocument()
+    expect(screen.getByText('To ship a working product.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'p. 2' })).toBeInTheDocument()
   })
 })

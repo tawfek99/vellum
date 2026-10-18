@@ -20,7 +20,22 @@ class SummaryResult:
     key_points: list[KeyPoint] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class AnswerResult:
+    answer: str
+    pages: list[int] = field(default_factory=list)
+
+
 class AIService(Protocol):
     async def summarize_document(self, text: str) -> SummaryResult:
         """Return a concise summary plus page-referenced key points."""
+        ...
+
+    async def answer_question(
+        self,
+        question: str,
+        context: str,
+        history: list[dict[str, str]],
+    ) -> AnswerResult:
+        """Answer a question grounded in the supplied document excerpts."""
         ...
