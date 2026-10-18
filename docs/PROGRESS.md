@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · docs: several `docs:` commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · plus docs/fix commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -202,11 +202,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Frontend:** `SummaryPanel` — the PDF narrows and the panel gets comfortable space; key points link to their page (jumps the viewer).
 - **Evidence:** 43 backend + 35 frontend tests · ruff/oxlint clean · build ok · **live Gemini summary verified** (correct page refs 1/2/3). Commit `d40ef5b`.
 
-### Level 14 — Document Q&A
-- **Goal:** ask questions grounded in a document.
-- **Backend:** `ai/retrieval.py` (keyword/Postgres FTS first; vectors later), `qa_messages` table, `POST /documents/{id}/ask` (job) + `GET /documents/{id}/qa` (history).
-- **Frontend:** Q&A chat panel with history.
-- **Acceptance:** answers grounded in the user's document; history persists; retrieval scoped to the selected document + user.
+### Level 14 — Document Q&A — ✅ DONE & APPLIED
+- **Delivered:** `ai/retrieval.py` (keyword scoring over `document_chunks`, DB-agnostic); `QAMessage` model + migration `9c1e7b2a4d10`; `services/qa.py` (ask, history, async job); `AIService.answer_question` + prompt + JSON parsing in the OpenAI-compatible provider; `POST /documents/{id}/ask`, `GET /documents/{id}/qa`.
+- **Flow:** ask → `ai_generations` row (`kind=qa`) + user `qa_messages` row + queued job → worker retrieves the top chunks, passes prior turns as history, stores the answer + cited pages, appends the assistant message.
+- **Frontend:** `QaPanel` — an **Ask** button beside **Summary**; chat history with clay user bubbles, parchment answer cards, clickable page citations that jump the viewer, suggested prompts, pending/error states, composer (Enter to send).
+- **Evidence:** 53 backend tests · 37 frontend tests · ruff/oxlint clean · typecheck + build ok · migration applied to Supabase · live routes confirmed in OpenAPI · `POST /ask` without auth → 401.
+- **Deviation:** retrieval is **keyword scoring in Python** rather than Postgres FTS, so the same code runs on SQLite tests and Postgres; `pgvector` remains deferred.
 
 ### Level 15 — Global search
 - **Goal:** search notes + document text in one place.
@@ -228,20 +229,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 14 (Document Q&A)
+## 5. Next Up — Level 15 (Global search)
 
-**Goal:** ask questions grounded in a document, with conversation history.
+**Goal:** search notes + document text in one place.
 
 **Backend:**
-- `ai/retrieval.py` — retrieve relevant chunks for a question (keyword/Postgres FTS first; pgvector embeddings later).
-- `qa_messages` table (role, content) + migration.
-- `POST /documents/{id}/ask` (job: retrieve chunks → `AIService.answer_question`) + `GET /documents/{id}/qa` (history).
-- Extend `AIService` with `answer_question(question, context, history)`.
+- `GET /search?q=…` over notes (title + content) and documents (title + extracted text / chunks), ranked with snippets.
+- Start with keyword/ILIKE scoring (same DB-agnostic approach as `ai/retrieval.py`); upgrade to Postgres FTS/trigram indexes later.
+- Results scoped to the authenticated user; return `{ notes: [...], documents: [...] }` with match snippets.
 
 **Frontend:**
-- A **Q&A panel** in the document view (alongside/switchable with Summary): ask box, message history, loading/error states, source page citations.
+- `features/search/SearchPage.tsx` at `/search`.
+- Command-palette entry (⌘K) in the TopBar + a real search input.
+- Highlight matched text and link each result to the note/document.
 
-**Acceptance:** ask a question about a `ready` document and get a grounded answer with history; retrieval scoped to the user's document.
+**Acceptance:** one query returns both notes and documents with highlighted snippets; results are user-scoped.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -417,17 +419,24 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Commit:** `3f49849`.
 - **Deeper fix:** a new document still glitched (1 page, 258 KB — not a page-count issue), so I removed the `ResizeObserver` entirely (measure once + window resize / summary-panel toggle), capped the rendered page width at **1200px** to bound canvas memory, and rAF-throttled scroll tracking. Commit `82d4fe5`.
 
+### 2026-10-18 — Level 14 implementation (Document Q&A) ✅
+- Summary issue confirmed working by the user (stale bundle / scanned PDF); no code change needed.
+- **Backend:** added `ai/retrieval.py`, `QAMessage` model + migration `9c1e7b2a4d10`, `services/qa.py`, `AIService.answer_question`, Q&A prompts/provider parsing, `POST /documents/{id}/ask` + `GET /documents/{id}/qa`, and the `answer_document_question` job dispatch.
+- **Retrieval:** keyword scoring over `document_chunks` (stopwords + document-order context); DB-agnostic so SQLite tests and Postgres share the same path. `pgvector` deferred.
+- **Frontend:** new `types/qa.ts`, API/hooks (`useQa`, `useAskQuestion`), and `QaPanel` (Ask button beside Summary, chat bubbles, page citations, suggested prompts, composer, pending/error states). `DocumentViewPage` now switches between the Summary and Ask panels.
+- **Tests:** `backend/tests/test_qa.py` (flow, follow-up history, scanned doc, auth, blank question, retrieval ranking/fallback, provider JSON) + two new `DocumentViewPage` tests.
+- **Evidence:** 53 backend tests · 37 frontend tests · ruff/oxlint clean · typecheck + build ok · migration applied · live OpenAPI shows `/ask` + `/qa` · unauthenticated `/ask` → 401.
+- **Commit:** `1b76b91`. **Status:** Level 14 done; ready for Level 15 (Global search).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–13 complete; summary UX follow-up committed (`1153aef`). **Working tree clean.**
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summaries), background job worker; **43 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI summary panel; **35 tests pass**.
-- **OPEN ISSUE (2026-10-18):** user reports **"nothing happened"** when pressing Summarize. DB check: **zero `ai_generations` rows** and no `summarize_document` jobs → the request never reached the backend.
-  - Most likely: stale browser bundle, or they summarized the **scanned `2.pdf`** (`needs_ocr`), which is now intentionally blocked with an explanatory notice.
-  - **Next debug step:** hard-refresh (Ctrl+Shift+R); open the **CV** (`Tawfek_Khalil_CV_DE (1)`, status `ready`, 2791 chars) → Summary → Summarize; watch the **Network tab** for `POST /documents/{id}/summary`. If no request fires, the click handler/code is stale; if it 400s, inspect the response detail.
-- **Next action:** resolve the summary issue, then **Level 14 — Document Q&A** (§5).
+- **Where we are:** Levels 0–14 complete; Level 14 committed (`1b76b91`). **Working tree clean.**
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), background job worker; **53 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary** and **Ask** panels; **37 tests pass**.
+- **Fixed/closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF); no code change was needed.
+- **Next action:** **Level 15 — Global search** (§5).
 - **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
 
 ---
@@ -435,12 +444,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Summary "nothing happened" (OPEN)** — no `ai_generations` rows / no jobs, so no request reached the backend. See §7 for the exact debug step (hard refresh → CV → Network tab). Resolve before Level 14.
-3. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
-4. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
-5. **`backend/.env`** — set (Supabase pooler + keys, `AI_API_KEY` for Gemini), gitignored. ✅ AI key collected.
-6. **Storage bucket `documents`** — created (private).
-7. **Note:** DB password + secrets are in `backend/.env` only; never commit.
+2. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
+3. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
+4. **`backend/.env`** — set (Supabase pooler + keys, `AI_API_KEY` for Gemini), gitignored. ✅ AI key collected.
+5. **Storage bucket `documents`** — created (private).
+6. **Note:** DB password + secrets are in `backend/.env` only; never commit.
+7. **Retrieval upgrade (future)** — Q&A uses in-Python keyword scoring; swap in Postgres FTS or `pgvector` embeddings when scale demands it.
 
 ---
 
@@ -468,7 +477,7 @@ Tables (all `uuid` PKs; `user_id` on every tenant-owned table; timestamps everyw
 - **folders** — id, user_id FK, name, parent_id (self-FK, nullable), created_at, updated_at; unique `(user_id, parent_id, name)`.
 - **notes** — id, user_id FK, folder_id FK nullable, title, content (markdown), is_pinned, created_at, updated_at.
 - **documents** — id, user_id FK, folder_id FK nullable, title, file_name, storage_path, mime_type, file_size_bytes, page_count, processing_status (`uploaded|extracting|needs_ocr|ready|failed`), text_content, error_message, created_at, updated_at.
-- **document_chunks** — id, document_id FK, chunk_index, content, token_count, embedding `vector(1536)` nullable (pgvector, added at Level 14).
+- **document_chunks** — id, document_id FK, chunk_index, content, token_count; `embedding vector(1536)` deferred (pgvector not used yet).
 - **jobs** — id, user_id FK, type, status (`queued|running|succeeded|failed`), payload jsonb, result jsonb, error, created_at, updated_at.
 - **ai_generations** — id, user_id FK, document_id FK nullable, note_id FK nullable, kind (`summary|qa|flashcards|quiz`), prompt, result jsonb, provider, model, status, error_message, tokens_used, created_at, updated_at.
 - **qa_messages** — id, generation_id FK, role (`user|assistant`), content, created_at.
