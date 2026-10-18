@@ -95,6 +95,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 15 | Editor: TipTap WYSIWYG (markdown) + Lora serif, bookmark overflow menu, "Saved to notebook" stamp | ✅ Confirmed | Editor lazily code-split; folder cards show `note_count` |
 | 16 | Documents UI: paper cards + upload dropzone + status badges + polling | ✅ Confirmed | Scanned PDFs shown as "Scanned PDF" (OCR deferred); PDF viewer at L12 |
 | 17 | Auth: JWT verification leeway (30s) + JWKS warm-up | ✅ Implemented | Fixes intermittent 401 from PyJWT `iat` clock skew |
+| 18 | PDF viewer: react-pdf continuous scroll + page/zoom controls | ✅ Confirmed | Signed URL only; no storage creds in the client; lazily loaded |
 
 ### 3b. External services — Supabase
 
@@ -186,11 +187,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **UX:** Upload button + **drag-and-drop** (drop overlay); torn-paper document cards with a **status badge** (Processing / Ready / **Scanned PDF** / Failed) and a menu (rename / move / delete); auto-**polling** while processing.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `31 passed` · build ok. Commit `1357468`.
 
-### Level 12 — PDF viewer
-- **Goal:** read PDFs in-app.
-- **Backend:** `GET /documents/{id}/content` → short-lived signed Storage URL.
-- **Frontend:** `features/documents/PdfViewer.tsx` using `react-pdf` (pdf.js): text layer, page nav, zoom.
-- **Acceptance:** PDF renders in-app with selectable text; no storage credentials ever reach the client.
+### Level 12 — PDF viewer — ✅ DONE
+- **Delivered:** `/documents/:id` (`features/documents/DocumentViewPage.tsx`) using **react-pdf (pdf.js)**; `lib/pdf.ts` (worker via Vite `?url`); `useDocumentContent` hook; signed URL from `GET /documents/{id}/content`.
+- **UX:** continuous-scroll reader, **prev/next + live page indicator**, **zoom**, selectable text layer; banners for `needs_ocr` / `failed` / processing; document cards link to the viewer.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`). Commit `45d7395`.
 
 ### Level 13 — AI summary
 - **Goal:** abstracted AI can summarize a document.
@@ -225,19 +225,24 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 12 (PDF viewer)
+## 5. Next Up — Level 13 (AI summary)
 
-**Goal:** read uploaded PDFs in-app.
+**Goal:** abstracted AI can summarize a document.
+
+**Prereq:** `AI_API_KEY` (+ `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`) in `backend/.env`.
+
+**Backend:**
+- `ai/base.py` (`AIService` protocol + result models).
+- `ai/providers/openai_compat.py` (shared OpenAI-compatible client) + `ai/providers/deepseek.py`.
+- `ai/factory.py` (provider chosen from env) + `ai/prompts.py`.
+- `ai_generations` table + migration; `POST /documents/{id}/summary` (enqueue job) + `GET /documents/{id}/summary`.
+- Job handler calls the AI service with the document text.
 
 **Frontend:**
-- A document detail route `/documents/:id` with a `react-pdf` (pdf.js) viewer.
-- Fetch a short-lived signed URL from `GET /documents/{id}/content` and render with a **text layer**; page navigation + zoom.
-- Handle `needs_ocr` (no text layer) gracefully with a message.
-- Paper-styled document header + metadata alongside the viewer.
+- "Summarize" action in the document workspace; summary panel with loading/error states.
+- Provider stays swappable via config only.
 
-**Backend:** already exposes `/documents/{id}/content` (signed URL) — no changes expected.
-
-**Acceptance:** a `ready` PDF renders in-app with selectable text; no storage credentials reach the client.
+**Acceptance:** Summarize → a stored summary is shown; changing the provider is config-only.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -378,14 +383,21 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `31 passed` · build ok. Commit `1357468`.
 - **Status:** Level 11 done; ready for Level 12 (PDF viewer).
 
+### 2026-10-18 — Level 12 implementation (PDF viewer) ✅
+- Built the in-app PDF reader at `/documents/:id` with **react-pdf (pdf.js)**.
+- **UX:** continuous scroll, prev/next + live page indicator, zoom, selectable text; banners for `needs_ocr` / `failed` / processing; document cards link into it.
+- **Added:** `lib/pdf.ts` (worker), `features/documents/DocumentViewPage.tsx`, `useDocumentContent`, `getDocumentContent`; viewer CSS; lazy route.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`, valid bytes).
+- **Commit:** `45d7395`. **Status:** Level 12 done; ready for Level 13 (AI summary).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–11 complete. Commits through `1357468`.
+- **Where we are:** Levels 0–12 complete. Commits through `45d7395`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
-- **Frontend:** running on `:5173`; shell + folder tree + torn-paper notes + WYSIWYG editor + desk dashboard + **documents UI (upload/cards/status/polling)** + drag-and-drop; **31 tests pass**.
-- **Next action:** implement **Level 12 — PDF viewer** (§5).
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + **in-app PDF viewer**; **35 tests pass**. No AI yet.
+- **Next action:** implement **Level 13 — AI summary** (§5). Requires `AI_API_KEY`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
