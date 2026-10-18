@@ -407,6 +407,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Fixed:** panel now explains why summarization isn't available (scanned / extracting / failed), surfaces unexpected request errors, shows an animated "reading the document" progress state, and is **wider (480px)** with **slide-in + fade-in** transitions when the summary arrives.
 - **Commit:** `1153aef`.
 
+### 2026-10-18 — Session pause (summary issue open)
+- User reports **"nothing happened"** on Summarize after the UX fix. DB check: **no `ai_generations` rows** and **no `summarize_document` jobs** → no request reached the backend.
+- Code is clean, latest bundle is served, backend healthy. Likely a **stale browser bundle** or summarizing the **scanned `2.pdf`** (`needs_ocr`, now intentionally blocked with a notice).
+- Everything is committed; see §7 for the exact next debug step and resume instructions.
+
 ### 2026-10-18 — PDF viewer stability fix
 - Fixed "heavy glitching" on open: **deduped ResizeObserver** width updates (rounded + 2px tolerance), **rounded page width**, **gate page rendering until the width is measured**, **memoized page elements** (scroll/page state no longer re-renders canvases), and only update the page indicator when it changes.
 - **Commit:** `3f49849`.
@@ -416,21 +421,24 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–13 complete. Commits through `1153aef`.
+- **Where we are:** Levels 0–13 complete; summary UX follow-up committed (`1153aef`). **Working tree clean.**
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summaries), background job worker; **43 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + **AI summary panel**; **35 tests pass**.
-- **Next action:** implement **Level 14 — Document Q&A** (§5).
-- **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI summary panel; **35 tests pass**.
+- **OPEN ISSUE (2026-10-18):** user reports **"nothing happened"** when pressing Summarize. DB check: **zero `ai_generations` rows** and no `summarize_document` jobs → the request never reached the backend.
+  - Most likely: stale browser bundle, or they summarized the **scanned `2.pdf`** (`needs_ocr`), which is now intentionally blocked with an explanatory notice.
+  - **Next debug step:** hard-refresh (Ctrl+Shift+R); open the **CV** (`Tawfek_Khalil_CV_DE (1)`, status `ready`, 2791 chars) → Summary → Summarize; watch the **Network tab** for `POST /documents/{id}/summary`. If no request fires, the click handler/code is stale; if it 400s, inspect the response detail.
+- **Next action:** resolve the summary issue, then **Level 14 — Document Q&A** (§5).
+- **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
 
 ---
 
 ## 8. Open items / TODOs
 
 1. **Git identity placeholder** — amend `27101e8` once real name/email is provided.
-2. **Collect `AI_API_KEY`** (DeepSeek or other) — required before Level 13.
+2. **Summary "nothing happened" (OPEN)** — no `ai_generations` rows / no jobs, so no request reached the backend. See §7 for the exact debug step (hard refresh → CV → Network tab). Resolve before Level 14.
 3. **Supabase Auth redirect URLs** — allow-list `http://localhost:5173` (for future email flows).
 4. **Keep docs in sync** — `docs/PROGRESS.md` ↔ `C:\Users\tawfi\.opencode\plan\project-plan-and-progress.md`.
-5. **`backend/.env`** — set (Supabase pooler + keys), gitignored.
+5. **`backend/.env`** — set (Supabase pooler + keys, `AI_API_KEY` for Gemini), gitignored. ✅ AI key collected.
 6. **Storage bucket `documents`** — created (private).
 7. **Note:** DB password + secrets are in `backend/.env` only; never commit.
 
