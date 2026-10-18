@@ -1,9 +1,29 @@
 import '@testing-library/jest-dom/vitest'
 
-// jsdom lacks a few browser APIs that Radix UI relies on.
+// jsdom lacks a few browser APIs that Radix UI / the PDF viewer rely on.
 if (!('ResizeObserver' in globalThis)) {
   class ResizeObserverStub {
-    observe(): void {}
+    private readonly callback: ResizeObserverCallback
+
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback
+    }
+
+    observe(target: Element): void {
+      this.callback(
+        [
+          {
+            target,
+            contentRect: { width: 800, height: 600 },
+            borderBoxSize: [],
+            contentBoxSize: [],
+            devicePixelContentBoxSize: [],
+          } as unknown as ResizeObserverEntry,
+        ],
+        this as unknown as ResizeObserver,
+      )
+    }
+
     unobserve(): void {}
     disconnect(): void {}
   }

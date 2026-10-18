@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   ArrowLeft,
@@ -226,8 +226,10 @@ function PdfViewer({
     const element = containerRef.current
     if (!element) return
     const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 0
-      if (width > 0) setContainerWidth(width)
+      const width = Math.round(entries[0]?.contentRect.width ?? 0)
+      if (width <= 0) return
+      // Ignore sub-pixel/scrollbar jitter to avoid a re-render loop.
+      setContainerWidth((current) => (Math.abs(current - width) < 2 ? current : width))
     })
     observer.observe(element)
     return () => observer.disconnect()
@@ -243,7 +245,8 @@ function PdfViewer({
     }
   }, [jumpTarget])
 
-  const pageWidth = containerWidth > 0 ? Math.max(200, (containerWidth - 32) * zoom) : undefined
+  const pageWidth =
+    containerWidth > 0 ? Math.max(200, Math.round((containerWidth - 32) * zoom)) : undefined
 
   function goToPage(target: number) {
     const clamped = Math.min(Math.max(target, 1), numPages || 1)
@@ -261,8 +264,25 @@ function PdfViewer({
         current = Math.max(current, number)
       }
     }
-    setPage(current)
+    setPage((previous) => (previous === current ? previous : current))
   }
+
+  // Memoize the pages so scrolling/state changes don't re-render every canvas.
+  const pages = useMemo(() => {
+    if (numPages <= 0 || pageWidth === undefined) return null
+    return Array.from({ length: numPages }, (_, index) => (
+      <div
+        key={index}
+        ref={(element) => {
+          if (element) pageRefs.current.set(index + 1, element)
+          else pageRefs.current.delete(index + 1)
+        }}
+        className="pdf-page"
+      >
+        <PdfPage pageNumber={index + 1} width={pageWidth} />
+      </div>
+    ))
+  }, [numPages, pageWidth])
 
   return (
     <div
@@ -287,20 +307,7 @@ function PdfViewer({
           }
           className="flex flex-col items-center gap-4"
         >
-          {numPages > 0
-            ? Array.from({ length: numPages }, (_, index) => (
-                <div
-                  key={index}
-                  ref={(element) => {
-                    if (element) pageRefs.current.set(index + 1, element)
-                    else pageRefs.current.delete(index + 1)
-                  }}
-                  className="pdf-page"
-                >
-                  <PdfPage pageNumber={index + 1} width={pageWidth} />
-                </div>
-              ))
-            : null}
+          {pages}
         </PdfDocument>
         {pdfError ? (
           <p className="mt-3 text-center text-xs text-brick-600">{pdfError}</p>
