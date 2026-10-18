@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Bookmark, FileText, FolderInput, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Link } from 'react-router'
 
 import { InlineNameInput } from '@/components/folders/InlineNameInput'
 import { FolderPickerDialog } from '@/components/folders/FolderPickerDialog'
@@ -89,24 +90,35 @@ export function DocumentCard({ document, folderName, folders }: DocumentCardProp
           </span>
           <div className="min-w-0 flex-1">
             {renaming ? (
-              <InlineNameInput
-                initialValue={document.title}
-                ariaLabel={`Rename ${document.title}`}
-                onSubmit={(title) => {
-                  setRenaming(false)
-                  if (title !== document.title) update({ id: document.id, input: { title } })
-                }}
-                onCancel={() => setRenaming(false)}
-              />
+              <>
+                <InlineNameInput
+                  initialValue={document.title}
+                  ariaLabel={`Rename ${document.title}`}
+                  onSubmit={(title) => {
+                    setRenaming(false)
+                    if (title !== document.title) update({ id: document.id, input: { title } })
+                  }}
+                  onCancel={() => setRenaming(false)}
+                />
+                <p className="mt-1 text-xs text-ink-400">
+                  {document.page_count > 0 ? `${document.page_count} pages · ` : ''}
+                  {formatBytes(document.file_size_bytes)}
+                </p>
+              </>
             ) : (
-              <h3 className="truncate font-serif text-base font-semibold text-ink-900">
-                {document.title}
-              </h3>
+              <Link
+                to={`/documents/${document.id}`}
+                className="block rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay-500"
+              >
+                <h3 className="truncate font-serif text-base font-semibold text-ink-900">
+                  {document.title}
+                </h3>
+                <p className="mt-1 text-xs text-ink-400">
+                  {document.page_count > 0 ? `${document.page_count} pages · ` : ''}
+                  {formatBytes(document.file_size_bytes)}
+                </p>
+              </Link>
             )}
-            <p className="mt-1 text-xs text-ink-400">
-              {document.page_count > 0 ? `${document.page_count} pages · ` : ''}
-              {formatBytes(document.file_size_bytes)}
-            </p>
           </div>
         </div>
       </div>

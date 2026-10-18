@@ -35,6 +35,13 @@ export const router = createBrowserRouter([
               })),
           },
           { path: '/documents', element: <DocumentsPage /> },
+          {
+            path: '/documents/:id',
+            lazy: () =>
+              import('@/features/documents/DocumentViewPage').then((module) => ({
+                Component: module.DocumentViewPage,
+              })),
+          },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],

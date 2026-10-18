@@ -1,5 +1,5 @@
 import { apiFetch } from '@/lib/api/client'
-import type { Document, DocumentList, DocumentUpdateInput } from '@/types/document'
+import type { Document, DocumentContent, DocumentList, DocumentUpdateInput } from '@/types/document'
 
 export interface ListDocumentsParams {
   folderId?: string | null
@@ -21,6 +21,10 @@ export function listDocuments(params: ListDocumentsParams = {}): Promise<Documen
 
 export function getDocument(id: string): Promise<Document> {
   return apiFetch<Document>(`/documents/${id}`)
+}
+
+export function getDocumentContent(id: string): Promise<DocumentContent> {
+  return apiFetch<DocumentContent>(`/documents/${id}/content`)
 }
 
 export interface UploadDocumentInput {

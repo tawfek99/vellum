@@ -4,6 +4,7 @@ import type { QueryKey } from '@tanstack/react-query'
 import {
   deleteDocument,
   getDocument,
+  getDocumentContent,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -35,6 +36,16 @@ export function useDocument(id: string | undefined) {
     queryKey: ['document', id],
     queryFn: () => getDocument(id as string),
     enabled: Boolean(id),
+  })
+}
+
+export function useDocumentContent(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['document-content', id],
+    queryFn: () => getDocumentContent(id as string),
+    enabled: Boolean(id) && enabled,
+    // Signed URLs are valid for ~1 hour; refresh comfortably before that.
+    staleTime: 50 * 60 * 1000,
   })
 }
 

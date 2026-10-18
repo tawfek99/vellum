@@ -28,6 +28,7 @@
     "lucide-react": "^1.54.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-pdf": "^11.0.0",
     "react-router": "^8.4.0",
     "tailwindcss": "^4.3.3",
     "tiptap-markdown": "^0.9.0"

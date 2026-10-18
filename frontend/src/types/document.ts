@@ -33,5 +33,10 @@ export interface DocumentUpdateInput {
   folder_id?: string | null
 }
 
+export interface DocumentContent {
+  url: string
+  expires_in: number
+}
+
 export const isProcessing = (status: DocumentStatus): boolean =>
   status === 'uploaded' || status === 'extracting'
