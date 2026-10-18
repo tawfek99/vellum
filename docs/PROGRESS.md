@@ -189,8 +189,8 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ### Level 12 — PDF viewer — ✅ DONE
 - **Delivered:** `/documents/:id` (`features/documents/DocumentViewPage.tsx`) using **react-pdf (pdf.js)**; `lib/pdf.ts` (worker via Vite `?url`); `useDocumentContent` hook; signed URL from `GET /documents/{id}/content`.
-- **UX:** continuous-scroll reader, **prev/next + live page indicator**, **zoom**, selectable text layer; banners for `needs_ocr` / `failed` / processing; document cards link to the viewer.
-- **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`). Commit `45d7395`.
+- **UX:** **fit-to-width** continuous-scroll reader (re-fits on resize), **floating page/zoom toolbar**, selectable text layer, and a **full-screen overlay**; banners for `needs_ocr` / `failed` / processing; document cards link to the viewer.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`). Commits `45d7395`, `65ccfb0`.
 
 ### Level 13 — AI summary
 - **Goal:** abstracted AI can summarize a document.
@@ -390,13 +390,17 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`, valid bytes).
 - **Commit:** `45d7395`. **Status:** Level 12 done; ready for Level 13 (AI summary).
 
+### 2026-10-18 — PDF viewer polish (fit-to-width + full screen)
+- Per user feedback (too little reading space): the reader now **fits the page to the available width** (re-fits on resize), with zoom relative to fit; page/zoom controls moved into a **floating pill**; added a **full-screen overlay** (hides sidebar/top bar); the document route uses the **full content width**.
+- **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok. Commit `65ccfb0`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–12 complete. Commits through `45d7395`.
+- **Where we are:** Levels 0–12 complete. Commits through `65ccfb0`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + **in-app PDF viewer**; **35 tests pass**. No AI yet.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + **fit-to-width PDF reader (full-screen)**; **35 tests pass**. No AI yet.
 - **Next action:** implement **Level 13 — AI summary** (§5). Requires `AI_API_KEY`.
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
