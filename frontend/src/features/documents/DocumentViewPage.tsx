@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Maximize,
   Maximize2,
   Minimize2,
   ZoomIn,
@@ -145,7 +144,7 @@ export function DocumentViewPage() {
               Exit full screen
             </button>
           </div>
-          <div className="min-h-0 flex-1 p-3">
+          <div className="flex min-h-0 flex-1 flex-col p-3">
             <PdfViewer url={url} isFullscreen onToggleFullscreen={() => setFullscreen(false)} />
           </div>
         </div>
@@ -291,14 +290,6 @@ function PdfViewer({
             onClick={() => setZoom((value) => Math.min(MAX_ZOOM, +(value * ZOOM_STEP).toFixed(2)))}
           >
             <ZoomIn className="size-4" aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={toolbarButton}
-            aria-label="Fit to width"
-            onClick={() => setZoom(1)}
-          >
-            <Maximize className="size-4" aria-hidden="true" />
           </button>
 
           <span className="mx-1 h-5 w-px bg-parchment-200" aria-hidden="true" />
