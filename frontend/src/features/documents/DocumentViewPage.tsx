@@ -76,6 +76,12 @@ export function DocumentViewPage() {
   const isProcessing =
     document.processing_status === 'uploaded' || document.processing_status === 'extracting'
   const url = content.data?.url
+  const requestError =
+    createSummary.error instanceof Error
+      ? createSummary.error.message
+      : createSummary.error
+        ? 'Something went wrong while summarizing.'
+        : null
 
   function handleJumpToPage(page: number) {
     setJumpTarget({ page, nonce: Date.now() })
@@ -163,11 +169,14 @@ export function DocumentViewPage() {
         </div>
 
         {summaryOpen && !fullscreen ? (
-          <aside className="fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4 lg:static lg:z-auto lg:w-[400px] lg:shrink-0 lg:overflow-visible lg:bg-transparent lg:p-0">
+          <aside className="fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4 lg:static lg:z-auto lg:w-[480px] lg:shrink-0 lg:overflow-visible lg:bg-transparent lg:p-0">
             <SummaryPanel
               summary={summaryQuery.data}
               isLoading={summaryQuery.isLoading}
               isError={summaryQuery.isError}
+              documentStatus={document.processing_status}
+              isRequesting={createSummary.isPending}
+              requestError={requestError}
               onClose={() => setSummaryOpen(false)}
               onRetry={() => createSummary.mutate(id as string)}
               onJumpToPage={handleJumpToPage}
