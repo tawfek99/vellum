@@ -393,12 +393,13 @@ Detailed future-level plans below are a guide and may be adjusted.
 ### 2026-10-18 — PDF viewer polish (fit-to-width + full screen)
 - Per user feedback (too little reading space): the reader now **fits the page to the available width** (re-fits on resize), with zoom relative to fit; page/zoom controls moved into a **floating pill**; added a **full-screen overlay** (hides sidebar/top bar); the document route uses the **full content width**.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok. Commit `65ccfb0`.
+- **Follow-up fix:** the full-screen content wrapper is now a flex column, so the reader fills the viewport and its **scrolling + zoom work**; removed the redundant "fit to width" button. Commit `923d620`.
 
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–12 complete. Commits through `65ccfb0`.
+- **Where we are:** Levels 0–12 complete. Commits through `923d620`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + **fit-to-width PDF reader (full-screen)**; **35 tests pass**. No AI yet.
 - **Next action:** implement **Level 13 — AI summary** (§5). Requires `AI_API_KEY`.
