@@ -96,6 +96,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 16 | Documents UI: paper cards + upload dropzone + status badges + polling | ✅ Confirmed | Scanned PDFs shown as "Scanned PDF" (OCR deferred); PDF viewer at L12 |
 | 17 | Auth: JWT verification leeway (30s) + JWKS warm-up | ✅ Implemented | Fixes intermittent 401 from PyJWT `iat` clock skew |
 | 18 | PDF viewer: react-pdf continuous scroll + page/zoom controls | ✅ Confirmed | Signed URL only; no storage creds in the client; lazily loaded |
+| 19 | AI provider: Gemini free tier via OpenAI-compatible endpoint | ✅ Confirmed | `gemini-3.8-flash`; summary = paragraph + page-cited key points |
 
 ### 3b. External services — Supabase
 
@@ -118,6 +119,8 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 Both `.env` files are gitignored. `.env.example` files document the keys with no values.
 
 > **Pooler note:** the connection uses Supabase's **transaction pooler** (pgbouncer), which does not support server-side prepared statements. Both the app engine (`app/db/session.py`) and Alembic (`alembic/env.py`) set `statement_cache_size=0` + `prepared_statement_cache_size=0`. The URL also carries `?ssl=require`.
+
+> **AI provider:** **Gemini free tier** via `https://generativelanguage.googleapis.com/v1beta/openai`, model `gemini-3.8-flash`. Key lives in `backend/.env` as `AI_API_KEY` (never committed); swap providers via `AI_PROVIDER` / `AI_BASE_URL` / `AI_MODEL`.
 
 ---
 
@@ -192,12 +195,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **UX:** **fit-to-width** continuous-scroll reader (re-fits on resize), **floating page/zoom toolbar**, selectable text layer, and a **full-screen overlay**; banners for `needs_ocr` / `failed` / processing; document cards link to the viewer.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok · signed URL verified live (200, `application/pdf`). Commits `45d7395`, `65ccfb0`.
 
-### Level 13 — AI summary
-- **Goal:** abstracted AI can summarize a document.
-- **Prereq:** `AI_API_KEY` (+ provider/model/base URL).
-- **Backend:** `ai/base.py` (`AIService` protocol + result models), `ai/providers/openai_compat.py`, `ai/providers/deepseek.py`, `ai/factory.py`, `ai/prompts.py`; `ai_generations` table; `POST /documents/{id}/summary` (job) + `GET`.
-- **Frontend:** summary panel in the document workspace.
-- **Acceptance:** click Summarize → stored summary shown; provider swapped via config only (no code change elsewhere).
+### Level 13 — AI summary — ✅ DONE
+- **Delivered:** `ai/base.py` (`AIService` protocol + `SummaryResult`/`KeyPoint`), `ai/providers/openai_compat.py`, `ai/factory.py`, `ai/prompts.py`; `ai_generations` model + migration `5a092d87c56e`; `services/summaries.py`; `POST/GET /documents/{id}/summary`.
+- **Provider:** **Gemini** (free tier) via its OpenAI-compatible endpoint (`gemini-3.8-flash`); provider chosen by config only.
+- **Page citations:** extraction now stores `[[page N]]` markers; the model cites pages per key point.
+- **Frontend:** `SummaryPanel` — the PDF narrows and the panel gets comfortable space; key points link to their page (jumps the viewer).
+- **Evidence:** 43 backend + 35 frontend tests · ruff/oxlint clean · build ok · **live Gemini summary verified** (correct page refs 1/2/3). Commit `d40ef5b`.
 
 ### Level 14 — Document Q&A
 - **Goal:** ask questions grounded in a document.
@@ -225,24 +228,20 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 13 (AI summary)
+## 5. Next Up — Level 14 (Document Q&A)
 
-**Goal:** abstracted AI can summarize a document.
-
-**Prereq:** `AI_API_KEY` (+ `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`) in `backend/.env`.
+**Goal:** ask questions grounded in a document, with conversation history.
 
 **Backend:**
-- `ai/base.py` (`AIService` protocol + result models).
-- `ai/providers/openai_compat.py` (shared OpenAI-compatible client) + `ai/providers/deepseek.py`.
-- `ai/factory.py` (provider chosen from env) + `ai/prompts.py`.
-- `ai_generations` table + migration; `POST /documents/{id}/summary` (enqueue job) + `GET /documents/{id}/summary`.
-- Job handler calls the AI service with the document text.
+- `ai/retrieval.py` — retrieve relevant chunks for a question (keyword/Postgres FTS first; pgvector embeddings later).
+- `qa_messages` table (role, content) + migration.
+- `POST /documents/{id}/ask` (job: retrieve chunks → `AIService.answer_question`) + `GET /documents/{id}/qa` (history).
+- Extend `AIService` with `answer_question(question, context, history)`.
 
 **Frontend:**
-- "Summarize" action in the document workspace; summary panel with loading/error states.
-- Provider stays swappable via config only.
+- A **Q&A panel** in the document view (alongside/switchable with Summary): ask box, message history, loading/error states, source page citations.
 
-**Acceptance:** Summarize → a stored summary is shown; changing the provider is config-only.
+**Acceptance:** ask a question about a `ready` document and get a grounded answer with history; retrieval scoped to the user's document.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -395,14 +394,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck clean · oxlint 0 · vitest `35 passed` · build ok. Commit `65ccfb0`.
 - **Follow-up fix:** the full-screen content wrapper is now a flex column, so the reader fills the viewport and its **scrolling + zoom work**; removed the redundant "fit to width" button. Commit `923d620`.
 
+### 2026-10-18 — Level 13 implementation (AI summary) ✅
+- Added the provider-agnostic AI layer: **Gemini free tier** via its OpenAI-compatible endpoint (`gemini-3.8-flash`).
+- **Backend:** `AIService` protocol + OpenAI-compatible provider + factory + prompts; `ai_generations` model/migration; async summarize job; `POST/GET /documents/{id}/summary`.
+- **Page citations:** extraction now stores `[[page N]]` markers; summaries include page-referenced key points.
+- **Frontend:** `SummaryPanel` — the PDF narrows and the panel gets comfortable space; key points jump to their page.
+- **Evidence:** 43 backend + 35 frontend tests · ruff/oxlint clean · **live Gemini summary verified** (correct page refs 1/2/3). Commit `d40ef5b`.
+- **Status:** Level 13 done; ready for Level 14 (Q&A).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–12 complete. Commits through `923d620`.
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ background job worker); **37 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + **fit-to-width PDF reader (full-screen)**; **35 tests pass**. No AI yet.
-- **Next action:** implement **Level 13 — AI summary** (§5). Requires `AI_API_KEY`.
+- **Where we are:** Levels 0–13 complete. Commits through `d40ef5b`.
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summaries), background job worker; **43 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + **AI summary panel**; **35 tests pass**.
+- **Next action:** implement **Level 14 — Document Q&A** (§5).
 - **Do not forget:** end each session by appending to §6 and updating §5/§7/§4 in BOTH mirrored files.
 
 ---
