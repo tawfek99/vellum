@@ -156,6 +156,7 @@ export function DocumentViewPage() {
             <PdfViewer
               url={url}
               jumpTarget={jumpTarget}
+              layoutKey={summaryOpen ? 'with-panel' : 'full'}
               onToggleFullscreen={() => setFullscreen(true)}
             />
           )}
@@ -205,15 +206,18 @@ function PdfViewer({
   isFullscreen,
   onToggleFullscreen,
   jumpTarget,
+  layoutKey = 'default',
 }: {
   url: string
   isFullscreen?: boolean
   onToggleFullscreen: () => void
   jumpTarget?: { page: number; nonce: number } | null
+  layoutKey?: string
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef(new Map<number, HTMLDivElement>())
+  const scrollFrame = useRef<number | null>(null)
 
   const [containerWidth, setContainerWidth] = useState(0)
   const [numPages, setNumPages] = useState(0)
@@ -221,19 +225,20 @@ function PdfViewer({
   const [zoom, setZoom] = useState(1)
   const [pdfError, setPdfError] = useState<string | null>(null)
 
-  // Fit the page to the available width, and re-fit on resize.
+  // Measure the available width once, then on window resize / layout changes.
+  // Deliberately no ResizeObserver: observing the container while pages resize
+  // can create a measure -> re-render -> measure feedback loop.
   useEffect(() => {
-    const element = containerRef.current
-    if (!element) return
-    const observer = new ResizeObserver((entries) => {
-      const width = Math.round(entries[0]?.contentRect.width ?? 0)
-      if (width <= 0) return
-      // Ignore sub-pixel/scrollbar jitter to avoid a re-render loop.
-      setContainerWidth((current) => (Math.abs(current - width) < 2 ? current : width))
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+    const measure = () => {
+      const element = containerRef.current
+      if (!element) return
+      const width = Math.round(element.clientWidth)
+      if (width > 0) setContainerWidth((current) => (current === width ? current : width))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [layoutKey])
 
   // Jump to a page when a summary citation is clicked.
   useEffect(() => {
@@ -246,7 +251,9 @@ function PdfViewer({
   }, [jumpTarget])
 
   const pageWidth =
-    containerWidth > 0 ? Math.max(200, Math.round((containerWidth - 32) * zoom)) : undefined
+    containerWidth > 0
+      ? Math.max(240, Math.min(1200, Math.round((containerWidth - 32) * zoom)))
+      : undefined
 
   function goToPage(target: number) {
     const clamped = Math.min(Math.max(target, 1), numPages || 1)
@@ -255,17 +262,27 @@ function PdfViewer({
   }
 
   function handleScroll() {
-    const container = scrollRef.current
-    if (!container) return
-    const containerTop = container.getBoundingClientRect().top
-    let current = 1
-    for (const [number, element] of pageRefs.current) {
-      if (element.getBoundingClientRect().top - containerTop <= 120) {
-        current = Math.max(current, number)
+    if (scrollFrame.current !== null) return
+    scrollFrame.current = window.requestAnimationFrame(() => {
+      scrollFrame.current = null
+      const container = scrollRef.current
+      if (!container) return
+      const containerTop = container.getBoundingClientRect().top
+      let current = 1
+      for (const [number, element] of pageRefs.current) {
+        if (element.getBoundingClientRect().top - containerTop <= 120) {
+          current = Math.max(current, number)
+        }
       }
-    }
-    setPage((previous) => (previous === current ? previous : current))
+      setPage((previous) => (previous === current ? previous : current))
+    })
   }
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrame.current !== null) window.cancelAnimationFrame(scrollFrame.current)
+    }
+  }, [])
 
   // Memoize the pages so scrolling/state changes don't re-render every canvas.
   const pages = useMemo(() => {

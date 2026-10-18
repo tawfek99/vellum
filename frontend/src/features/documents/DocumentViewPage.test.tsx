@@ -44,6 +44,14 @@ vi.mock('@/hooks/useDocuments', () => ({
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
+// jsdom has no layout; give the viewer a measurable width.
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+    configurable: true,
+    get: () => 800,
+  })
+})
+
 function document_(status: Document['processing_status']): Document {
   return {
     id: 'd1',
