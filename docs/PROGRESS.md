@@ -405,12 +405,13 @@ Detailed future-level plans below are a guide and may be adjusted.
 ### 2026-10-18 — PDF viewer stability fix
 - Fixed "heavy glitching" on open: **deduped ResizeObserver** width updates (rounded + 2px tolerance), **rounded page width**, **gate page rendering until the width is measured**, **memoized page elements** (scroll/page state no longer re-renders canvases), and only update the page indicator when it changes.
 - **Commit:** `3f49849`.
+- **Deeper fix:** a new document still glitched (1 page, 258 KB — not a page-count issue), so I removed the `ResizeObserver` entirely (measure once + window resize / summary-panel toggle), capped the rendered page width at **1200px** to bound canvas memory, and rAF-throttled scroll tracking. Commit `82d4fe5`.
 
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–13 complete. Commits through `3f49849`.
+- **Where we are:** Levels 0–13 complete. Commits through `82d4fe5`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summaries), background job worker; **43 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + **AI summary panel**; **35 tests pass**.
 - **Next action:** implement **Level 14 — Document Q&A** (§5).
