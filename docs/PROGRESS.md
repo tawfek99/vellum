@@ -402,6 +402,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 43 backend + 35 frontend tests · ruff/oxlint clean · **live Gemini summary verified** (correct page refs 1/2/3). Commit `d40ef5b`.
 - **Status:** Level 13 done; ready for Level 14 (Q&A).
 
+### 2026-10-18 — Summary UX follow-up
+- The 400 the user saw was correct: they summarized a **scanned** PDF (`needs_ocr`, 0 text). The UI was swallowing the error.
+- **Fixed:** panel now explains why summarization isn't available (scanned / extracting / failed), surfaces unexpected request errors, shows an animated "reading the document" progress state, and is **wider (480px)** with **slide-in + fade-in** transitions when the summary arrives.
+- **Commit:** `1153aef`.
+
 ### 2026-10-18 — PDF viewer stability fix
 - Fixed "heavy glitching" on open: **deduped ResizeObserver** width updates (rounded + 2px tolerance), **rounded page width**, **gate page rendering until the width is measured**, **memoized page elements** (scroll/page state no longer re-renders canvases), and only update the page indicator when it changes.
 - **Commit:** `3f49849`.
@@ -411,7 +416,7 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–13 complete. Commits through `82d4fe5`.
+- **Where we are:** Levels 0–13 complete. Commits through `1153aef`.
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summaries), background job worker; **43 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + **AI summary panel**; **35 tests pass**.
 - **Next action:** implement **Level 14 — Document Q&A** (§5).
