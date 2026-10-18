@@ -150,7 +150,15 @@ async def _handle_extract_pdf(db: AsyncSession, job: Job) -> dict[str, Any]:
         return {"status": "needs_ocr", "pages": result.page_count}
 
     await db.execute(delete(DocumentChunk).where(DocumentChunk.document_id == document.id))
-    for index, chunk in enumerate(chunk_text(result.text)):
+
+    # Include page markers so AI features can cite pages.
+    marked_text = "\n\n".join(
+        f"[[page {index + 1}]]\n{page_text.strip()}"
+        for index, page_text in enumerate(result.pages)
+        if page_text.strip()
+    )
+
+    for index, chunk in enumerate(chunk_text(marked_text)):
         db.add(
             DocumentChunk(
                 document_id=document.id,
@@ -160,14 +168,23 @@ async def _handle_extract_pdf(db: AsyncSession, job: Job) -> dict[str, Any]:
             )
         )
 
-    document.text_content = result.text
+    document.text_content = marked_text
     document.processing_status = "ready"
     document.error_message = None
     await db.commit()
-    return {"status": "ready", "pages": result.page_count, "chunks": len(chunk_text(result.text))}
+    return {
+        "status": "ready",
+        "pages": result.page_count,
+        "chunks": len(chunk_text(marked_text)),
+    }
 
 
 async def handle_job(db: AsyncSession, job: Job) -> dict[str, Any]:
     if job.type == "extract_pdf":
         return await _handle_extract_pdf(db, job)
+    if job.type == "summarize_document":
+        # Local import avoids a circular dependency (summaries uses documents).
+        from app.services.summaries import handle_summarize_job
+
+        return await handle_summarize_job(db, job)
     raise ValueError(f"Unknown job type: {job.type}")

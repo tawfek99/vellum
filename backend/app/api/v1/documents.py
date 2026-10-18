@@ -17,8 +17,10 @@ from app.schemas.document import (
     DocumentStatus,
     DocumentUpdate,
 )
+from app.schemas.summary import SummaryKeyPoint, SummaryRead
 from app.services import documents as document_service
 from app.services import storage
+from app.services import summaries as summary_service
 
 router = APIRouter(prefix="/documents")
 
@@ -154,3 +156,46 @@ async def get_document_content(
     expires_in = 3600
     url = await storage.create_signed_url(document.storage_path, expires_in)
     return DocumentContent(url=url, expires_in=expires_in)
+
+
+def _to_summary_read(generation) -> SummaryRead:  # noqa: ANN001
+    if generation is None:
+        return SummaryRead(status="none")
+    result = generation.result or {}
+    return SummaryRead(
+        id=generation.id,
+        status=generation.status,
+        summary=result.get("summary"),
+        key_points=[SummaryKeyPoint(**point) for point in result.get("key_points", [])],
+        error=generation.error,
+    )
+
+
+@router.post(
+    "/{document_id}/summary",
+    response_model=SummaryRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Request an AI summary",
+)
+async def create_summary(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> SummaryRead:
+    generation = await summary_service.create_summary_request(db, profile.id, document_id)
+    return _to_summary_read(generation)
+
+
+@router.get(
+    "/{document_id}/summary",
+    response_model=SummaryRead,
+    summary="Get the latest summary",
+)
+async def get_summary(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> SummaryRead:
+    await document_service.get_document(db, profile.id, document_id)
+    generation = await summary_service.get_latest_summary(db, profile.id, document_id)
+    return _to_summary_read(generation)

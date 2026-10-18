@@ -1,5 +1,6 @@
 import { apiFetch } from '@/lib/api/client'
 import type { Document, DocumentContent, DocumentList, DocumentUpdateInput } from '@/types/document'
+import type { Summary } from '@/types/summary'
 
 export interface ListDocumentsParams {
   folderId?: string | null
@@ -46,4 +47,12 @@ export function updateDocument(id: string, input: DocumentUpdateInput): Promise<
 
 export function deleteDocument(id: string): Promise<void> {
   return apiFetch<void>(`/documents/${id}`, { method: 'DELETE' })
+}
+
+export function getSummary(id: string): Promise<Summary> {
+  return apiFetch<Summary>(`/documents/${id}/summary`)
+}
+
+export function createSummary(id: string): Promise<Summary> {
+  return apiFetch<Summary>(`/documents/${id}/summary`, { method: 'POST' })
 }

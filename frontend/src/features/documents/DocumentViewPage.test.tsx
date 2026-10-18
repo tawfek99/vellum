@@ -39,6 +39,8 @@ vi.mock('react-pdf', async () => {
 vi.mock('@/hooks/useDocuments', () => ({
   useDocument: mocks.useDocument,
   useDocumentContent: mocks.useDocumentContent,
+  useSummary: () => ({ data: { status: 'none' }, isLoading: false, isError: false }),
+  useCreateSummary: () => ({ mutate: vi.fn() }),
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 

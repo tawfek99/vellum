@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
+  Sparkles,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
@@ -16,7 +17,13 @@ import 'react-pdf/dist/Page/TextLayer.css'
 
 import { Spinner } from '@/components/ui/Spinner'
 import { DocumentStatusBadge } from '@/features/documents/DocumentStatusBadge'
-import { useDocument, useDocumentContent } from '@/hooks/useDocuments'
+import { SummaryPanel } from '@/features/documents/SummaryPanel'
+import {
+  useCreateSummary,
+  useDocument,
+  useDocumentContent,
+  useSummary,
+} from '@/hooks/useDocuments'
 import { useFolders } from '@/hooks/useFolders'
 import { cn } from '@/lib/cn'
 import '@/lib/pdf'
@@ -34,6 +41,10 @@ export function DocumentViewPage() {
   const content = useDocumentContent(id, Boolean(document))
   const foldersQuery = useFolders()
   const [fullscreen, setFullscreen] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [jumpTarget, setJumpTarget] = useState<{ page: number; nonce: number } | null>(null)
+  const summaryQuery = useSummary(id, summaryOpen)
+  const createSummary = useCreateSummary()
 
   if (isLoading) {
     return (
@@ -66,6 +77,11 @@ export function DocumentViewPage() {
     document.processing_status === 'uploaded' || document.processing_status === 'extracting'
   const url = content.data?.url
 
+  function handleJumpToPage(page: number) {
+    setJumpTarget({ page, nonce: Date.now() })
+    if (!window.matchMedia('(min-width: 1024px)').matches) setSummaryOpen(false)
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex items-center gap-3">
@@ -92,6 +108,16 @@ export function DocumentViewPage() {
           />
           <button
             type="button"
+            onClick={() => setSummaryOpen((open) => !open)}
+            aria-pressed={summaryOpen}
+            data-active={summaryOpen}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-clay-500 data-[active=true]:bg-parchment-200"
+          >
+            <Sparkles className="size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Summary</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setFullscreen(true)}
             aria-label="View full screen"
             className="inline-flex size-9 items-center justify-center rounded-lg text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-clay-500"
@@ -116,17 +142,38 @@ export function DocumentViewPage() {
         <Banner tone="ink">Extracting text… the viewer is available while this finishes.</Banner>
       ) : null}
 
-      {fullscreen ? null : content.isLoading ? (
-        <div className="flex flex-1 items-center justify-center rounded-xl bg-cream-100">
-          <Spinner className="size-6" />
+      <div className="flex min-h-0 flex-1 gap-4">
+        <div className="flex min-h-0 flex-1 flex-col">
+          {fullscreen ? null : content.isLoading ? (
+            <div className="flex flex-1 items-center justify-center rounded-xl bg-cream-100">
+              <Spinner className="size-6" />
+            </div>
+          ) : content.isError || !url ? (
+            <div className="flex flex-1 items-center justify-center rounded-xl bg-cream-100">
+              <p className="text-sm text-brick-600">Couldn&apos;t load the PDF.</p>
+            </div>
+          ) : (
+            <PdfViewer
+              url={url}
+              jumpTarget={jumpTarget}
+              onToggleFullscreen={() => setFullscreen(true)}
+            />
+          )}
         </div>
-      ) : content.isError || !url ? (
-        <div className="flex flex-1 items-center justify-center rounded-xl bg-cream-100">
-          <p className="text-sm text-brick-600">Couldn&apos;t load the PDF.</p>
-        </div>
-      ) : (
-        <PdfViewer url={url} onToggleFullscreen={() => setFullscreen(true)} />
-      )}
+
+        {summaryOpen && !fullscreen ? (
+          <aside className="fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4 lg:static lg:z-auto lg:w-[400px] lg:shrink-0 lg:overflow-visible lg:bg-transparent lg:p-0">
+            <SummaryPanel
+              summary={summaryQuery.data}
+              isLoading={summaryQuery.isLoading}
+              isError={summaryQuery.isError}
+              onClose={() => setSummaryOpen(false)}
+              onRetry={() => createSummary.mutate(id as string)}
+              onJumpToPage={handleJumpToPage}
+            />
+          </aside>
+        ) : null}
+      </div>
 
       {fullscreen && url ? (
         <div className="fixed inset-0 z-50 flex flex-col bg-cream-100">
@@ -157,10 +204,12 @@ function PdfViewer({
   url,
   isFullscreen,
   onToggleFullscreen,
+  jumpTarget,
 }: {
   url: string
   isFullscreen?: boolean
   onToggleFullscreen: () => void
+  jumpTarget?: { page: number; nonce: number } | null
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -183,6 +232,16 @@ function PdfViewer({
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
+
+  // Jump to a page when a summary citation is clicked.
+  useEffect(() => {
+    if (!jumpTarget) return
+    const element = pageRefs.current.get(jumpTarget.page)
+    if (element) {
+      setPage(jumpTarget.page)
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [jumpTarget])
 
   const pageWidth = containerWidth > 0 ? Math.max(200, (containerWidth - 32) * zoom) : undefined
 

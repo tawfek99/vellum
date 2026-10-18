@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { QueryKey } from '@tanstack/react-query'
 
 import {
+  createSummary,
   deleteDocument,
   getDocument,
   getDocumentContent,
+  getSummary,
   listDocuments,
   updateDocument,
   uploadDocument,
@@ -12,6 +14,7 @@ import {
   type UploadDocumentInput,
 } from '@/features/documents/api'
 import { isProcessing, type DocumentList, type DocumentUpdateInput } from '@/types/document'
+import { isSummaryProcessing, type Summary } from '@/types/summary'
 
 export const documentsQueryKey = (params: ListDocumentsParams = {}): QueryKey => [
   'documents',
@@ -77,6 +80,28 @@ export function useDeleteDocument() {
     mutationFn: deleteDocument,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
+export function useSummary(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['document-summary', id],
+    queryFn: () => getSummary(id as string),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data as Summary | undefined
+      return data && isSummaryProcessing(data.status) ? 2000 : false
+    },
+  })
+}
+
+export function useCreateSummary() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (documentId: string) => createSummary(documentId),
+    onSuccess: (summary, documentId) => {
+      queryClient.setQueryData(['document-summary', documentId], summary)
     },
   })
 }
