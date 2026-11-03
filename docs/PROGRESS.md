@@ -437,13 +437,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 60 backend tests · 40 frontend tests · ruff/oxlint clean · typecheck + build ok · live OpenAPI shows `/api/v1/search` · unauthenticated → 401.
 - **Commit:** `1c405f0`. **Status:** Level 15 done; ready for Level 16 (Flashcards & quizzes).
 
+### 2026-11-03 — Documents in folders (fix) ✅
+- **Reported:** dragging documents into folders did nothing, and "adding" a document to a folder appeared broken.
+- **Diagnosis:** the backend move already worked (DB confirmed documents with `folder_id`), but (a) `DocumentCard` was **not draggable** and the DnD provider only knew `folder`/`note`; (b) opening a folder showed **notes only**, so filed documents looked missing.
+- **Fix:** documents are now draggable into sidebar folders (`DragData` includes `document`, `AppDndProvider` handles `document`); the "Move to folder…" menu uses the same **optimistic** mutation so the folder pill updates immediately; the folder view renders a **Documents** section beneath the notes.
+- **Added:** `useMoveDocument` (optimistic + rollback), `enabled` option on `useDocuments`, `DocumentCard` drag wiring, `NotesPanel` folder-documents section; a backend test for folder moves and a frontend test for the folder documents view.
+- **Evidence:** 61 backend tests · 41 frontend tests · ruff/oxlint clean · typecheck + build ok.
+- **Commit:** `2c8af76`.
+- **Known follow-up:** optimistic folder creation uses a `temp-…` id; opening that folder before the server responds yields a 422. Hide/disable temp folders until the real id arrives.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`). **Working tree clean.**
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **60 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; **40 tests pass**.
+- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`). **Working tree clean.**
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **61 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **41 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
 - **Next action:** **Level 16 — Flashcards & quizzes** (§5).
 - **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
@@ -460,6 +469,7 @@ Detailed future-level plans below are a guide and may be adjusted.
 6. **Note:** DB password + secrets are in `backend/.env` only; never commit.
 7. **Retrieval/search upgrade (future)** — Q&A and search use in-Python keyword scoring; swap in Postgres FTS/trigram or `pgvector` embeddings when scale demands it.
 8. **Search polish** — ⌘K command palette and result pagination can follow later.
+9. **Optimistic folder ids** — newly created folders get a `temp-…` id until the server responds; guard navigation/actions on temp ids to avoid a 422.
 
 ---
 
