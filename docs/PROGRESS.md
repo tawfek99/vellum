@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · plus docs/fix commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · plus docs/fix commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -209,11 +209,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 53 backend tests · 37 frontend tests · ruff/oxlint clean · typecheck + build ok · migration applied to Supabase · live routes confirmed in OpenAPI · `POST /ask` without auth → 401.
 - **Deviation:** retrieval is **keyword scoring in Python** rather than Postgres FTS, so the same code runs on SQLite tests and Postgres; `pgvector` remains deferred.
 
-### Level 15 — Global search
-- **Goal:** search notes + document text in one place.
-- **Backend:** unified `GET /search` over notes + extracted document text (Postgres FTS + trigram), ranked results with snippets.
-- **Frontend:** `features/search/SearchPage.tsx` + command palette (⌘K) entry in the TopBar.
-- **Acceptance:** search returns notes and documents with match highlighting.
+### Level 15 — Global search — ✅ DONE
+- **Delivered:** `services/search.py` (keyword pre-filter via SQL `ILIKE` + in-Python ranking/snippets); `GET /search?q=…` returning user-scoped `{ query, notes, documents }`; `features/search/SearchPage.tsx` at `/search`, `useSearch` + `useDebouncedValue`; live TopBar search box that routes to the page.
+- **UX:** grouped **Notes** and **Documents** paper-card results, `<mark>` match highlighting, relative timestamps, links into the note editor / PDF viewer, empty and no-results states.
+- **Deviation:** keyword ranking rather than Postgres FTS/trigram (DB-agnostic; upgrade later). ⌘K command palette deferred.
+- **Evidence:** 60 backend tests · 40 frontend tests · ruff/oxlint clean · typecheck + build ok · live `/api/v1/search` registered · unauthenticated → 401.
 
 ### Level 16 — Flashcards & quizzes
 - **Goal:** generate study material from documents.
@@ -229,21 +229,22 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 15 (Global search)
+## 5. Next Up — Level 16 (Flashcards & quizzes)
 
-**Goal:** search notes + document text in one place.
+**Goal:** generate study material from a document.
 
 **Backend:**
-- `GET /search?q=…` over notes (title + content) and documents (title + extracted text / chunks), ranked with snippets.
-- Start with keyword/ILIKE scoring (same DB-agnostic approach as `ai/retrieval.py`); upgrade to Postgres FTS/trigram indexes later.
-- Results scoped to the authenticated user; return `{ notes: [...], documents: [...] }` with match snippets.
+- Extend `AIService` with structured generation (`generate_flashcards`, `generate_quiz`) returning validated Pydantic objects.
+- Prompts return JSON; validate with Pydantic and do **one repair retry**; never store malformed output as success.
+- Store results in `ai_generations` (`kind` = `flashcards` / `quiz`, `result` jsonb).
+- `POST /documents/{id}/flashcards`, `POST /documents/{id}/quiz`, plus `GET` endpoints for the latest result.
+- Reuse the existing job queue and chunk retrieval for context.
 
 **Frontend:**
-- `features/search/SearchPage.tsx` at `/search`.
-- Command-palette entry (⌘K) in the TopBar + a real search input.
-- Highlight matched text and link each result to the note/document.
+- A **Study** panel/page in the document workspace: generate flashcards, flip through cards, and take a scored quiz.
+- Loading/error states + regenerate.
 
-**Acceptance:** one query returns both notes and documents with highlighted snippets; results are user-scoped.
+**Acceptance:** generate and study; malformed model output is rejected or repaired, never stored as success.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -428,15 +429,23 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 53 backend tests · 37 frontend tests · ruff/oxlint clean · typecheck + build ok · migration applied · live OpenAPI shows `/ask` + `/qa` · unauthenticated `/ask` → 401.
 - **Commit:** `1b76b91`. **Status:** Level 14 done; ready for Level 15 (Global search).
 
+### 2026-11-03 — Level 15 implementation (Global search) ✅
+- **Backend:** `GET /api/v1/search?q=…` over notes (title + content) and documents (title + extracted text). Keyword pre-filter (`ILIKE`) + in-Python ranking (title matches weighted 5×) and snippets, scoped to the authenticated user.
+- **Frontend:** `SearchPage` at `/search` with a large live input (debounced), URL-synced query (`?q=`), grouped **Notes** / **Documents** paper cards, `<mark>` highlight, relative dates, links into the editor/viewer; the TopBar placeholder is now a real search box.
+- **Decisions:** ⌘K command palette deferred; Postgres FTS/trigram deferred (DB-agnostic ranking now).
+- **Added:** `backend/app/schemas/search.py`, `services/search.py`, `api/v1/search.py`, `tests/test_search.py`; frontend `types/search.ts`, `features/search/{api,SearchPage}`, `hooks/useSearch.ts`, `SearchPage.test.tsx`.
+- **Evidence:** 60 backend tests · 40 frontend tests · ruff/oxlint clean · typecheck + build ok · live OpenAPI shows `/api/v1/search` · unauthenticated → 401.
+- **Commit:** `1c405f0`. **Status:** Level 15 done; ready for Level 16 (Flashcards & quizzes).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–14 complete; Level 14 committed (`1b76b91`). **Working tree clean.**
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), background job worker; **53 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary** and **Ask** panels; **37 tests pass**.
-- **Fixed/closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF); no code change was needed.
-- **Next action:** **Level 15 — Global search** (§5).
+- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`). **Working tree clean.**
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **60 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; **40 tests pass**.
+- **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
+- **Next action:** **Level 16 — Flashcards & quizzes** (§5).
 - **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
 
 ---
@@ -449,7 +458,8 @@ Detailed future-level plans below are a guide and may be adjusted.
 4. **`backend/.env`** — set (Supabase pooler + keys, `AI_API_KEY` for Gemini), gitignored. ✅ AI key collected.
 5. **Storage bucket `documents`** — created (private).
 6. **Note:** DB password + secrets are in `backend/.env` only; never commit.
-7. **Retrieval upgrade (future)** — Q&A uses in-Python keyword scoring; swap in Postgres FTS or `pgvector` embeddings when scale demands it.
+7. **Retrieval/search upgrade (future)** — Q&A and search use in-Python keyword scoring; swap in Postgres FTS/trigram or `pgvector` embeddings when scale demands it.
+8. **Search polish** — ⌘K command palette and result pagination can follow later.
 
 ---
 
