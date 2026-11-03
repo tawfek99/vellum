@@ -446,11 +446,17 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Commit:** `2c8af76`.
 - **Known follow-up:** optimistic folder creation uses a `temp-…` id; opening that folder before the server responds yields a 422. Hide/disable temp folders until the real id arrives.
 
+### 2026-11-03 — Dashboard scroll + drop animation (polish) ✅
+- **Dashboard scrollbar:** the page's scroll container was inside the centered `max-w-6xl` wrapper, so the bar sat inset. `AppShell` now gives the dashboard/settings a full-width wrapper; those pages center their own content, putting the bar at the edge of the main area.
+- **Drop animation:** dropping a note/document/folder now plays a **"sucked into the folder"** effect — a ghost of the dragged item animates from the drop point to the target folder's center while shrinking and fading (`suck-into-folder` keyframes), alongside the existing folder pulse.
+- **Evidence:** typecheck · oxlint 0 · vitest `41 passed` · build ok.
+- **Commit:** `255202f`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`). **Working tree clean.**
+- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`). **Working tree clean.**
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **61 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **41 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
