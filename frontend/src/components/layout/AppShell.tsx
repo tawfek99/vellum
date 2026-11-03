@@ -12,6 +12,11 @@ import { cn } from '@/lib/cn'
  */
 export function AppShell() {
   const isDocumentView = useMatch('/documents/:id') !== null
+  const isDashboard = useMatch('/') !== null
+  const isSettings = useMatch('/settings') !== null
+  // These pages own a full-width scroll container and center their own
+  // content, so the scrollbar sits at the edge of the main area.
+  const isFullWidth = isDocumentView || isDashboard || isSettings
 
   return (
     <AppDndProvider>
@@ -23,7 +28,7 @@ export function AppShell() {
             <div
               className={cn(
                 'mx-auto flex min-h-0 w-full flex-1 flex-col',
-                isDocumentView ? 'max-w-none' : 'max-w-6xl',
+                isFullWidth ? 'max-w-none' : 'max-w-6xl',
               )}
             >
               <Outlet />

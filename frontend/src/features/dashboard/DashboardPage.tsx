@@ -23,13 +23,14 @@ export function DashboardPage() {
   const roots = folders.filter((folder) => folder.parent_id === null)
 
   return (
-    <div className="h-full space-y-10 overflow-y-auto pr-1">
-      <div>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink-900">
-          Welcome back, {name}
-        </h1>
-        <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s on your desk.</p>
-      </div>
+    <div className="h-full overflow-y-auto pr-1">
+      <div className="mx-auto w-full max-w-6xl space-y-10">
+        <div>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink-900">
+            Welcome back, {name}
+          </h1>
+          <p className="mt-1 text-sm text-ink-500">Here&apos;s what&apos;s on your desk.</p>
+        </div>
 
       <section aria-labelledby="recent-heading" className="space-y-4">
         <div className="flex items-center justify-between">
@@ -111,6 +112,7 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+      </div>
     </div>
   )
 }

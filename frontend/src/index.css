@@ -243,6 +243,26 @@ body {
   animation: drop-confirm 700ms ease-out forwards;
 }
 
+/* Ghost of the dragged item, pulled into the folder it was dropped on. */
+@keyframes suck-into-folder {
+  0% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--suck-x), var(--suck-y)) scale(0.14) rotate(-5deg);
+    opacity: 0;
+  }
+}
+.suck-ghost {
+  animation: suck-into-folder 380ms cubic-bezier(0.55, 0, 0.75, 0.35) forwards;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;

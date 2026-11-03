@@ -10,11 +10,12 @@ export function SettingsPage() {
   const { user } = useSession()
 
   return (
-    <div className="h-full space-y-6 overflow-y-auto pr-1">
-      <div>
-        <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-900">Settings</h1>
-        <p className="mt-1 text-sm text-ink-500">Manage your account.</p>
-      </div>
+    <div className="h-full overflow-y-auto pr-1">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <div>
+          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-900">Settings</h1>
+          <p className="mt-1 text-sm text-ink-500">Manage your account.</p>
+        </div>
 
       <section className="rounded-xl border border-parchment-200 bg-parchment-50 p-5">
         <h2 className="text-sm font-medium text-ink-900">Account</h2>
@@ -40,6 +41,7 @@ export function SettingsPage() {
           </Button>
         </div>
       </section>
+      </div>
     </div>
   )
 }
