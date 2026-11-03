@@ -10,7 +10,7 @@ export function SettingsPage() {
   const { user } = useSession()
 
   return (
-    <div className="h-full overflow-y-auto pr-1">
+    <div className="-mx-4 h-full overflow-y-auto px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <div className="mx-auto w-full max-w-6xl space-y-6">
         <div>
           <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink-900">Settings</h1>

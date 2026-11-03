@@ -23,7 +23,7 @@ export function DashboardPage() {
   const roots = folders.filter((folder) => folder.parent_id === null)
 
   return (
-    <div className="h-full overflow-y-auto pr-1">
+    <div className="-mx-4 h-full overflow-y-auto px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
       <div className="mx-auto w-full max-w-6xl space-y-10">
         <div>
           <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink-900">
