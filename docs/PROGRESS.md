@@ -452,11 +452,17 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck · oxlint 0 · vitest `41 passed` · build ok.
 - **Commit:** `255202f`.
 
+### 2026-11-03 — Scrollbar styling ✅
+- Replaced default OS scrollbars with a **thin terracotta ("clay") thread on a transparent track**: rounded 6px thumb, subtle at rest, darker on hover — `::-webkit-scrollbar` for Chromium/Safari plus `scrollbar-width`/`scrollbar-color` for Firefox.
+- The dashboard/settings scroll containers now bleed to the column edge (`-mx-4/6/8` + matching padding), so the bar sits at the **far right** of the content area instead of inset.
+- **Evidence:** typecheck · oxlint 0 · vitest `41 passed` · build ok.
+- **Commit:** `e685986`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`). **Working tree clean.**
+- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`, `e685986`). **Working tree clean.**
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **61 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **41 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
