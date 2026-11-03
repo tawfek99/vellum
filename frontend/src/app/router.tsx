@@ -7,6 +7,7 @@ import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DocumentsPage } from '@/features/documents/DocumentsPage'
 import { NotFoundPage } from '@/features/misc/NotFoundPage'
 import { NotesPanel } from '@/features/notes/NotesPanel'
+import { SearchPage } from '@/features/search/SearchPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
 /**
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
                 Component: module.DocumentViewPage,
               })),
           },
+          { path: '/search', element: <SearchPage /> },
           { path: '/settings', element: <SettingsPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
