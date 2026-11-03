@@ -14,6 +14,7 @@ import {
 
 import { AppDndContext, type DragData } from '@/features/dnd/context'
 import { collectDescendantIds } from '@/features/folders/tree'
+import { useMoveDocument } from '@/hooks/useDocuments'
 import { useFolders, useMoveFolder } from '@/hooks/useFolders'
 import { useMoveNote } from '@/hooks/useNotes'
 
@@ -42,6 +43,7 @@ export function AppDndProvider({ children }: { children: ReactNode }) {
   const { data: folders } = useFolders()
   const moveFolder = useMoveFolder()
   const moveNote = useMoveNote()
+  const moveDocument = useMoveDocument()
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -80,6 +82,9 @@ export function AppDndProvider({ children }: { children: ReactNode }) {
     } else if (dragged.type === 'note') {
       moveNote.mutate({ id: dragged.id, folderId: dropFolderId })
       pulse(dropFolderId ?? 'root')
+    } else if (dragged.type === 'document') {
+      moveDocument.mutate({ id: dragged.id, folderId: dropFolderId })
+      pulse(dropFolderId ?? 'root')
     }
   }
 
@@ -103,7 +108,7 @@ export function AppDndProvider({ children }: { children: ReactNode }) {
         >
           {activeDrag ? (
             <div className="inline-flex max-w-64 rotate-2 scale-[1.03] cursor-grabbing items-center gap-2 rounded-xl border border-clay-500/40 bg-parchment-50 px-3 py-2 text-sm font-medium text-ink-800 shadow-[0_24px_46px_-18px_rgba(61,45,28,0.65)]">
-              {activeDrag.type === 'folder' ? '📁' : '📝'}
+              {activeDrag.type === 'folder' ? '📁' : activeDrag.type === 'note' ? '📝' : '📄'}
               <span className="truncate">{activeDrag.label}</span>
             </div>
           ) : null}

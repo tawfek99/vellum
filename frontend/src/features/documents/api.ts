@@ -8,6 +8,7 @@ export interface ListDocumentsParams {
   page?: number
   pageSize?: number
   signal?: AbortSignal
+  enabled?: boolean
 }
 
 export function listDocuments(params: ListDocumentsParams = {}): Promise<DocumentList> {

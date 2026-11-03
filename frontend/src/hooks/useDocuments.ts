@@ -24,10 +24,11 @@ export const documentsQueryKey = (params: ListDocumentsParams = {}): QueryKey =>
   params,
 ]
 
-export function useDocuments(params: ListDocumentsParams = {}) {
+export function useDocuments({ enabled = true, ...params }: ListDocumentsParams = {}) {
   return useQuery({
     queryKey: documentsQueryKey(params),
     queryFn: ({ signal }) => listDocuments({ ...params, signal }),
+    enabled,
     // Poll only while something is still being processed.
     refetchInterval: (query) => {
       const data = query.state.data as DocumentList | undefined
@@ -83,6 +84,43 @@ export function useDeleteDocument() {
     mutationFn: deleteDocument,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
+/**
+ * Move a document into a folder (or unfile it with `folderId: null`).
+ * Updates every cached documents list optimistically so the folder pill
+ * changes immediately; rolls back if the request fails.
+ */
+export function useMoveDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, folderId }: { id: string; folderId: string | null }) =>
+      updateDocument(id, { folder_id: folderId }),
+    onMutate: async ({ id, folderId }) => {
+      await queryClient.cancelQueries({ queryKey: ['documents'] })
+      const snapshots = queryClient.getQueriesData<DocumentList>({ queryKey: ['documents'] })
+
+      for (const [key, data] of snapshots) {
+        if (!data) continue
+        queryClient.setQueryData<DocumentList>(key, {
+          ...data,
+          items: data.items.map((item) =>
+            item.id === id ? { ...item, folder_id: folderId } : item,
+          ),
+        })
+      }
+      return { snapshots }
+    },
+    onError: (_error, _variables, context) => {
+      for (const [key, data] of context?.snapshots ?? []) {
+        queryClient.setQueryData(key, data)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['document'] })
     },
   })
 }

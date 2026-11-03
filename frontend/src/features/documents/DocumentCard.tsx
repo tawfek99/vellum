@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { useDraggable } from '@dnd-kit/core'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Bookmark, FileText, FolderInput, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
@@ -9,7 +10,12 @@ import { FolderPickerDialog } from '@/components/folders/FolderPickerDialog'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { DocumentStatusBadge } from '@/features/documents/DocumentStatusBadge'
-import { useDeleteDocument, useUpdateDocument } from '@/hooks/useDocuments'
+import { useAppDnd } from '@/features/dnd/context'
+import {
+  useDeleteDocument,
+  useMoveDocument,
+  useUpdateDocument,
+} from '@/hooks/useDocuments'
 import { cn } from '@/lib/cn'
 import { formatBytes } from '@/lib/format'
 import { tiltFor } from '@/lib/paper'
@@ -27,12 +33,23 @@ export function DocumentCard({ document, folderName, folders }: DocumentCardProp
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
+  const { activeDrag } = useAppDnd()
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `document-drag-${document.id}`,
+    data: { type: 'document', id: document.id, label: document.title },
+  })
+  const dragging = isDragging && activeDrag?.id === document.id
+
   const { mutate: update } = useUpdateDocument()
+  const { mutate: moveDocument } = useMoveDocument()
   const { mutate: remove } = useDeleteDocument()
 
   return (
     <article
-      className="paper group"
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn('paper group cursor-grab active:cursor-grabbing', dragging && 'opacity-40')}
       style={{ '--paper-tilt': `${tiltFor(document.id)}deg` } as CSSProperties}
     >
       <span className="paper__bg" aria-hidden="true" />
@@ -130,7 +147,7 @@ export function DocumentCard({ document, folderName, folders }: DocumentCardProp
         description={`Choose a folder for “${document.title}”.`}
         folders={folders}
         currentFolderId={document.folder_id}
-        onSelect={(folderId) => update({ id: document.id, input: { folder_id: folderId } })}
+        onSelect={(folderId) => moveDocument({ id: document.id, folderId })}
       />
 
       <Modal

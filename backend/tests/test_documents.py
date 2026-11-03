@@ -80,6 +80,32 @@ async def test_upload_list_get_update_delete(
     assert (await client.get(f"/api/v1/documents/{document_id}")).status_code == 404
 
 
+async def test_document_can_be_moved_between_folders(
+    client: httpx.AsyncClient, authenticated: None
+) -> None:
+    folder = (await client.post("/api/v1/folders", json={"name": "Work"})).json()
+    upload = await client.post(
+        "/api/v1/documents",
+        files={"file": ("Report.pdf", make_pdf("Body"), "application/pdf")},
+    )
+    document_id = upload.json()["id"]
+
+    moved = await client.patch(
+        f"/api/v1/documents/{document_id}", json={"folder_id": folder["id"]}
+    )
+    assert moved.status_code == 200
+    assert moved.json()["folder_id"] == folder["id"]
+
+    listed = await client.get("/api/v1/documents", params={"folder_id": folder["id"]})
+    assert [item["id"] for item in listed.json()["items"]] == [document_id]
+
+    unfiled = await client.patch(
+        f"/api/v1/documents/{document_id}", json={"folder_id": None}
+    )
+    assert unfiled.status_code == 200
+    assert unfiled.json()["folder_id"] is None
+
+
 async def test_rejects_non_pdf(client: httpx.AsyncClient, authenticated: None) -> None:
     response = await client.post(
         "/api/v1/documents",

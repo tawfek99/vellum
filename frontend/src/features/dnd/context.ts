@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
 
 export interface DragData {
-  type: 'folder' | 'note'
+  type: 'folder' | 'note' | 'document'
   id: string
   label: string
 }

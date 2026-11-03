@@ -14,6 +14,7 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: mocks.useDocuments,
   useUploadDocument: () => ({ mutate: mocks.upload, isPending: false }),
   useUpdateDocument: () => ({ mutate: mocks.upload }),
+  useMoveDocument: () => ({ mutate: mocks.upload }),
   useDeleteDocument: () => ({ mutate: mocks.upload }),
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))

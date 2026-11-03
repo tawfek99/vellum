@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { DocumentCard } from '@/features/documents/DocumentCard'
 import { NoteCard } from '@/features/notes/NoteCard'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { useDocuments } from '@/hooks/useDocuments'
 import { useFolders } from '@/hooks/useFolders'
 import { useCreateNote, useDeleteNote, useNotes, useUpdateNote } from '@/hooks/useNotes'
 import type { Note } from '@/types/note'
@@ -29,10 +31,16 @@ export function NotesPanel() {
   const createNote = useCreateNote()
   const updateNote = useUpdateNote()
   const deleteNote = useDeleteNote()
+  const documentsQuery = useDocuments({
+    folderId,
+    pageSize: 50,
+    enabled: Boolean(folderId),
+  })
 
   const folders = foldersQuery.data ?? []
   const folderName = folders.find((folder) => folder.id === folderId)?.name ?? null
   const notes = data?.items ?? []
+  const folderDocuments = folderId ? (documentsQuery.data?.items ?? []) : []
 
   function handleNewNote() {
     createNote.mutate(
@@ -152,6 +160,25 @@ export function NotesPanel() {
             ))}
           </div>
         )}
+
+        {folderId && folderDocuments.length > 0 ? (
+          <section className="mt-8 space-y-3">
+            <div className="flex items-baseline gap-2">
+              <h2 className="font-serif text-lg font-semibold text-ink-900">Documents</h2>
+              <span className="text-xs text-ink-400">{folderDocuments.length}</span>
+            </div>
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(16rem,1fr))]">
+              {folderDocuments.map((document) => (
+                <DocumentCard
+                  key={document.id}
+                  document={document}
+                  folderName={folderName}
+                  folders={folders}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       <Modal
