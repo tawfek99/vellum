@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · plus docs/fix commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · plus docs/fix commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -215,11 +215,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Deviation:** keyword ranking rather than Postgres FTS/trigram (DB-agnostic; upgrade later). ⌘K command palette deferred.
 - **Evidence:** 60 backend tests · 40 frontend tests · ruff/oxlint clean · typecheck + build ok · live `/api/v1/search` registered · unauthenticated → 401.
 
-### Level 16 — Flashcards & quizzes
-- **Goal:** generate study material from documents.
-- **Backend:** structured (JSON) generation with Pydantic validation + single repair retry; store in `ai_generations` jsonb; `POST /documents/{id}/flashcards`, `POST /documents/{id}/quiz`.
-- **Frontend:** flashcard study view + quiz view.
-- **Acceptance:** generate and study; malformed model output never stored as success.
+### Level 16 — Flashcards & quizzes — ✅ DONE
+- **Delivered:** `AIService.generate_flashcards` / `generate_quiz` with Pydantic-validated JSON and **one repair retry**; `services/study.py` (request → job → result, latest lookup); `POST/GET /documents/{id}/flashcards` and `POST/GET /documents/{id}/quiz`.
+- **Storage:** results in `ai_generations` (`kind` = `flashcards` / `quiz`, `result` jsonb). Malformed model output is rejected/retried and never stored as success.
+- **Frontend:** a **Study** button beside Summary/Ask opens the wide AI panel with **Flashcards / Quiz** tabs: a 3D flip deck (click or Space to flip, arrow keys to move, smooth card-swap + progress bar), and a scored quiz with instant feedback and explanations.
+- **Evidence:** 70 backend + 43 frontend tests · ruff/oxlint clean · typecheck + build ok · live model generated 8 flashcards in ~1.2s and 6 valid quiz questions.
 
 ### Level 17 — Hardening + deploy
 - **Goal:** production-ready + live.
@@ -229,22 +229,24 @@ Detailed future-level plans below are a guide and may be adjusted.
 
 ---
 
-## 5. Next Up — Level 16 (Flashcards & quizzes)
+## 5. Next Up — Level 17 (Hardening + deploy)
 
-**Goal:** generate study material from a document.
+**Goal:** production-ready and live at a public URL.
 
-**Backend:**
-- Extend `AIService` with structured generation (`generate_flashcards`, `generate_quiz`) returning validated Pydantic objects.
-- Prompts return JSON; validate with Pydantic and do **one repair retry**; never store malformed output as success.
-- Store results in `ai_generations` (`kind` = `flashcards` / `quiz`, `result` jsonb).
-- `POST /documents/{id}/flashcards`, `POST /documents/{id}/quiz`, plus `GET` endpoints for the latest result.
-- Reuse the existing job queue and chunk retrieval for context.
+**Hardening:**
+- Error boundaries + friendly failure states; accessibility pass (focus, labels, keyboard).
+- Test depth where thin; structured logging/observability; pagination where lists grow.
+- Security review: RLS as defense-in-depth, CORS allowlist, secrets audit.
 
-**Frontend:**
-- A **Study** panel/page in the document workspace: generate flashcards, flip through cards, and take a scored quiz.
-- Loading/error states + regenerate.
+**Deploy:**
+- Frontend on **Vercel/Netlify**, backend on **Render** (free tier), Supabase CORS/redirect URLs.
+- Set env vars (`DATABASE_URL`, `SUPABASE_*`, `AI_*` with `AI_MODEL=gemini-3.5-flash-lite`).
+- Cold-start handled by the job + polling pattern.
 
-**Acceptance:** generate and study; malformed model output is rejected or repaired, never stored as success.
+**Recruiter access (from earlier discussion):**
+- Add a one-click **"Try a demo"** entry on the login page that signs into a seeded demo account (sample folders/notes/documents), keeping real auth intact.
+
+**Acceptance:** live on a public URL with green checks, and a recruiter can explore a populated demo without touching real data.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -466,15 +468,23 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 61 backend + 41 frontend tests · ruff/oxlint clean · typecheck + build ok · live model answer 0.8s.
 - **Commit:** `73d6b15`.
 
+### 2026-11-06 — Level 16 implementation (Flashcards & quizzes) ✅
+- **Backend:** `generate_flashcards` / `generate_quiz` on `AIService`, JSON prompts, Pydantic validation with **one repair retry**; `services/study.py` and `POST/GET /documents/{id}/flashcards` + `POST/GET /documents/{id}/quiz`.
+- **Safety:** malformed model output raises after the retry, so the job is marked failed and nothing invalid is stored as success.
+- **Frontend:** **Study** button (third AI panel) with Flashcards/Quiz tabs; 3D flip deck (click/Space to flip, arrows to navigate, smooth card-swap + progress bar + regenerate); scored quiz with instant correct/incorrect feedback, explanations, and a final score.
+- **Added:** `schemas/study.py`, `services/study.py`, `tests/test_study.py`; frontend `types/study.ts`, `StudyPanel.tsx`, hooks/API, tests, flashcard CSS.
+- **Evidence:** 70 backend + 43 frontend tests · ruff/oxlint clean · typecheck + build ok · live model produced 8 flashcards (~1.2s) and 6 valid quiz questions.
+- **Commit:** `af37b06`. **Status:** Level 16 done; ready for Level 17 (Hardening + deploy).
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`, `e685986`) + AI reliability/panel fix (`73d6b15`). **Working tree clean.**
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`; AI model `gemini-3.5-flash-lite`; **61 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **41 tests pass**.
+- **Where we are:** Levels 0–16 complete; Level 16 committed (`af37b06`). **Working tree clean.**
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A + flashcards + quiz), `/search`; AI model `gemini-3.5-flash-lite`; **70 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + PDF reader + AI **Summary**/**Ask**/**Study** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **43 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
-- **Next action:** **Level 16 — Flashcards & quizzes** (§5).
+- **Next action:** **Level 17 — Hardening + deploy** (§5), including the recruiter **demo mode**.
 - **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
 
 ---
