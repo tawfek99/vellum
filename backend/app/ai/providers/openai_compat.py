@@ -7,14 +7,34 @@ work through this one adapter — only base URL / model / key differ.
 import asyncio
 import json
 import re
+from collections.abc import Callable
+from typing import TypeVar
 
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from app.ai.base import AnswerResult, KeyPoint, SummaryResult
-from app.ai.prompts import QA_SYSTEM, SUMMARY_SYSTEM, qa_user_prompt, summary_user_prompt
+from app.ai.base import (
+    AnswerResult,
+    Flashcard,
+    FlashcardResult,
+    KeyPoint,
+    QuizQuestion,
+    QuizResult,
+    SummaryResult,
+)
+from app.ai.prompts import (
+    FLASHCARDS_SYSTEM,
+    QA_SYSTEM,
+    QUIZ_SYSTEM,
+    SUMMARY_SYSTEM,
+    flashcards_user_prompt,
+    qa_user_prompt,
+    quiz_user_prompt,
+    summary_user_prompt,
+)
 
 _FENCE = re.compile(r"^```[a-zA-Z]*\s*|\s*```$", re.MULTILINE)
+_T = TypeVar("_T")
 
 
 class _KeyPointPayload(BaseModel):
@@ -30,6 +50,26 @@ class _SummaryPayload(BaseModel):
 class _AnswerPayload(BaseModel):
     answer: str
     pages: list[int] = []
+
+
+class _FlashcardPayload(BaseModel):
+    front: str
+    back: str
+
+
+class _FlashcardsPayload(BaseModel):
+    cards: list[_FlashcardPayload] = []
+
+
+class _QuizQuestionPayload(BaseModel):
+    question: str
+    options: list[str]
+    answer_index: int
+    explanation: str | None = None
+
+
+class _QuizPayload(BaseModel):
+    questions: list[_QuizQuestionPayload] = []
 
 
 def _extract_json(raw: str) -> dict[str, object] | None:
@@ -134,3 +174,77 @@ class OpenAICompatibleProvider:
                 pass
         # Fall back to a plain-text answer if the model didn't return JSON.
         return AnswerResult(answer=raw.strip())
+
+    async def _complete_structured(
+        self,
+        *,
+        system: str,
+        user: str,
+        parse: Callable[[dict[str, object]], _T],
+        invalid_message: str,
+    ) -> _T:
+        """Ask for JSON, validate it, and retry once if the model got it wrong."""
+        for attempt in range(2):
+            prompt = user
+            if attempt == 1:
+                prompt = (
+                    f"{user}\n\nYour previous response was invalid. "
+                    "Return ONLY valid JSON matching the exact shape requested, "
+                    "with no markdown fences or commentary."
+                )
+            raw = await self._complete(system=system, user=prompt)
+            payload = _extract_json(raw)
+            if payload is not None:
+                try:
+                    return parse(payload)
+                except (ValidationError, ValueError):
+                    pass
+        raise RuntimeError(invalid_message)
+
+    async def generate_flashcards(self, text: str) -> FlashcardResult:
+        def parse(payload: dict[str, object]) -> FlashcardResult:
+            parsed = _FlashcardsPayload.model_validate(payload)
+            cards = [
+                Flashcard(front=card.front.strip(), back=card.back.strip())
+                for card in parsed.cards
+                if card.front.strip() and card.back.strip()
+            ]
+            if not cards:
+                raise ValueError("No usable flashcards")
+            return FlashcardResult(cards=cards)
+
+        return await self._complete_structured(
+            system=FLASHCARDS_SYSTEM,
+            user=flashcards_user_prompt(text),
+            parse=parse,
+            invalid_message="The AI returned invalid flashcards. Please try again.",
+        )
+
+    async def generate_quiz(self, text: str) -> QuizResult:
+        def parse(payload: dict[str, object]) -> QuizResult:
+            parsed = _QuizPayload.model_validate(payload)
+            questions: list[QuizQuestion] = []
+            for item in parsed.questions:
+                options = [option.strip() for option in item.options if option.strip()]
+                if len(options) != 4:
+                    raise ValueError("Every question needs four options")
+                if not 0 <= item.answer_index < len(options):
+                    raise ValueError("Invalid answer index")
+                questions.append(
+                    QuizQuestion(
+                        question=item.question.strip(),
+                        options=options,
+                        answer_index=item.answer_index,
+                        explanation=(item.explanation or "").strip() or None,
+                    )
+                )
+            if not questions:
+                raise ValueError("No usable questions")
+            return QuizResult(questions=questions)
+
+        return await self._complete_structured(
+            system=QUIZ_SYSTEM,
+            user=quiz_user_prompt(text),
+            parse=parse,
+            invalid_message="The AI returned an invalid quiz. Please try again.",
+        )

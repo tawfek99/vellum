@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
   Maximize2,
   MessageCircle,
   Minimize2,
@@ -19,13 +20,18 @@ import 'react-pdf/dist/Page/TextLayer.css'
 import { Spinner } from '@/components/ui/Spinner'
 import { DocumentStatusBadge } from '@/features/documents/DocumentStatusBadge'
 import { QaPanel } from '@/features/documents/QaPanel'
+import { StudyPanel } from '@/features/documents/StudyPanel'
 import { SummaryPanel } from '@/features/documents/SummaryPanel'
 import {
   useAskQuestion,
+  useCreateFlashcards,
+  useCreateQuiz,
   useCreateSummary,
   useDocument,
   useDocumentContent,
+  useFlashcards,
   useQa,
+  useQuiz,
   useSummary,
 } from '@/hooks/useDocuments'
 import { useFolders } from '@/hooks/useFolders'
@@ -36,7 +42,7 @@ const MIN_ZOOM = 0.5
 const MAX_ZOOM = 3
 const ZOOM_STEP = 1.15
 
-type AiPanel = 'summary' | 'qa' | null
+type AiPanel = 'summary' | 'qa' | 'study' | null
 
 const toolbarButton =
   'inline-flex size-8 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-clay-500'
@@ -51,10 +57,15 @@ export function DocumentViewPage() {
   const [jumpTarget, setJumpTarget] = useState<{ page: number; nonce: number } | null>(null)
   const summaryOpen = panel === 'summary'
   const qaOpen = panel === 'qa'
+  const studyOpen = panel === 'study'
   const summaryQuery = useSummary(id, summaryOpen)
   const qaQuery = useQa(id, qaOpen)
+  const flashcardsQuery = useFlashcards(id, studyOpen)
+  const quizQuery = useQuiz(id, studyOpen)
   const createSummary = useCreateSummary()
   const askQuestion = useAskQuestion()
+  const createFlashcards = useCreateFlashcards()
+  const createQuiz = useCreateQuiz()
 
   if (isLoading) {
     return (
@@ -98,6 +109,16 @@ export function DocumentViewPage() {
       : askQuestion.error
         ? 'Something went wrong while asking.'
         : null
+  const studyError =
+    createFlashcards.error instanceof Error
+      ? createFlashcards.error.message
+      : createFlashcards.error
+        ? 'Something went wrong while creating flashcards.'
+        : createQuiz.error instanceof Error
+          ? createQuiz.error.message
+          : createQuiz.error
+            ? 'Something went wrong while creating the quiz.'
+            : null
   const showAside = panel !== null && !fullscreen
 
   function handleJumpToPage(page: number) {
@@ -149,6 +170,17 @@ export function DocumentViewPage() {
           >
             <MessageCircle className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">Ask</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPanel((current) => (current === 'study' ? null : 'study'))}
+            aria-label="Study this document"
+            aria-pressed={studyOpen}
+            data-active={studyOpen}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-ink-600 transition-colors hover:bg-parchment-100 hover:text-ink-900 focus-visible:outline-2 focus-visible:outline-clay-500 data-[active=true]:bg-parchment-200"
+          >
+            <GraduationCap className="size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Study</span>
           </button>
           <button
             type="button"
@@ -220,7 +252,7 @@ export function DocumentViewPage() {
                 onRetry={() => createSummary.mutate(id as string)}
                 onJumpToPage={handleJumpToPage}
               />
-            ) : (
+            ) : panel === 'qa' ? (
               <QaPanel
                 history={qaQuery.data}
                 isLoading={qaQuery.isLoading}
@@ -232,6 +264,24 @@ export function DocumentViewPage() {
                 onClose={() => setPanel(null)}
                 onJumpToPage={handleJumpToPage}
                 onRetry={() => void qaQuery.refetch()}
+              />
+            ) : (
+              <StudyPanel
+                flashcards={flashcardsQuery.data}
+                flashcardsLoading={flashcardsQuery.isLoading}
+                flashcardsError={flashcardsQuery.isError}
+                quiz={quizQuery.data}
+                quizLoading={quizQuery.isLoading}
+                quizError={quizQuery.isError}
+                documentStatus={document.processing_status}
+                isGeneratingFlashcards={createFlashcards.isPending}
+                isGeneratingQuiz={createQuiz.isPending}
+                generateError={studyError}
+                onGenerateFlashcards={() => createFlashcards.mutate(id as string)}
+                onGenerateQuiz={() => createQuiz.mutate(id as string)}
+                onRetryFlashcards={() => void flashcardsQuery.refetch()}
+                onRetryQuiz={() => void quizQuery.refetch()}
+                onClose={() => setPanel(null)}
               />
             )
           ) : null}

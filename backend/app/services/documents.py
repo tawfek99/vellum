@@ -192,4 +192,9 @@ async def handle_job(db: AsyncSession, job: Job) -> dict[str, Any]:
         from app.services.qa import handle_answer_job
 
         return await handle_answer_job(db, job)
+    if job.type in ("generate_flashcards", "generate_quiz"):
+        # Local import avoids a circular dependency (study uses documents).
+        from app.services.study import handle_study_job
+
+        return await handle_study_job(db, job)
     raise ValueError(f"Unknown job type: {job.type}")

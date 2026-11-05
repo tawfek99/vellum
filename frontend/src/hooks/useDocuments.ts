@@ -3,11 +3,15 @@ import type { QueryKey } from '@tanstack/react-query'
 
 import {
   askQuestion,
+  createFlashcards,
+  createQuiz,
   createSummary,
   deleteDocument,
   getDocument,
   getDocumentContent,
+  getFlashcards,
   getQa,
+  getQuiz,
   getSummary,
   listDocuments,
   updateDocument,
@@ -17,6 +21,7 @@ import {
 } from '@/features/documents/api'
 import { isProcessing, type DocumentList, type DocumentUpdateInput } from '@/types/document'
 import { isQaProcessing, type QaHistory } from '@/types/qa'
+import { isStudyProcessing, type FlashcardSet, type Quiz } from '@/types/study'
 import { isSummaryProcessing, type Summary } from '@/types/summary'
 
 export const documentsQueryKey = (params: ListDocumentsParams = {}): QueryKey => [
@@ -167,6 +172,50 @@ export function useAskQuestion() {
       askQuestion(id, question),
     onSuccess: (_exchange, { id }) => {
       void queryClient.invalidateQueries({ queryKey: ['document-qa', id] })
+    },
+  })
+}
+
+export function useFlashcards(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['document-flashcards', id],
+    queryFn: () => getFlashcards(id as string),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data as FlashcardSet | undefined
+      return data && isStudyProcessing(data.status) ? 2000 : false
+    },
+  })
+}
+
+export function useCreateFlashcards() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (documentId: string) => createFlashcards(documentId),
+    onSuccess: (set, documentId) => {
+      queryClient.setQueryData(['document-flashcards', documentId], set)
+    },
+  })
+}
+
+export function useQuiz(id: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['document-quiz', id],
+    queryFn: () => getQuiz(id as string),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: (query) => {
+      const data = query.state.data as Quiz | undefined
+      return data && isStudyProcessing(data.status) ? 2000 : false
+    },
+  })
+}
+
+export function useCreateQuiz() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (documentId: string) => createQuiz(documentId),
+    onSuccess: (quiz, documentId) => {
+      queryClient.setQueryData(['document-quiz', documentId], quiz)
     },
   })
 }

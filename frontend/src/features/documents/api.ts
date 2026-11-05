@@ -1,6 +1,7 @@
 import { apiFetch } from '@/lib/api/client'
 import type { Document, DocumentContent, DocumentList, DocumentUpdateInput } from '@/types/document'
 import type { QaExchange, QaHistory } from '@/types/qa'
+import type { FlashcardSet, Quiz } from '@/types/study'
 import type { Summary } from '@/types/summary'
 
 export interface ListDocumentsParams {
@@ -68,4 +69,20 @@ export function askQuestion(id: string, question: string): Promise<QaExchange> {
     method: 'POST',
     body: { question },
   })
+}
+
+export function getFlashcards(id: string): Promise<FlashcardSet> {
+  return apiFetch<FlashcardSet>(`/documents/${id}/flashcards`)
+}
+
+export function createFlashcards(id: string): Promise<FlashcardSet> {
+  return apiFetch<FlashcardSet>(`/documents/${id}/flashcards`, { method: 'POST' })
+}
+
+export function getQuiz(id: string): Promise<Quiz> {
+  return apiFetch<Quiz>(`/documents/${id}/quiz`)
+}
+
+export function createQuiz(id: string): Promise<Quiz> {
+  return apiFetch<Quiz>(`/documents/${id}/quiz`, { method: 'POST' })
 }

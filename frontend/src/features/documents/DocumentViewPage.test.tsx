@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   useFolders: vi.fn(),
   useQa: vi.fn(),
   useAskQuestion: vi.fn(),
+  useFlashcards: vi.fn(),
+  useQuiz: vi.fn(),
 }))
 
 vi.mock('@/lib/pdf', () => ({}))
@@ -46,6 +48,10 @@ vi.mock('@/hooks/useDocuments', () => ({
   useCreateSummary: () => ({ mutate: vi.fn() }),
   useQa: mocks.useQa,
   useAskQuestion: mocks.useAskQuestion,
+  useFlashcards: mocks.useFlashcards,
+  useQuiz: mocks.useQuiz,
+  useCreateFlashcards: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  useCreateQuiz: () => ({ mutate: vi.fn(), isPending: false, error: null }),
 }))
 vi.mock('@/hooks/useFolders', () => ({ useFolders: mocks.useFolders }))
 
@@ -102,6 +108,18 @@ describe('DocumentViewPage', () => {
       mutate: vi.fn(),
       isPending: false,
       error: null,
+    })
+    mocks.useFlashcards.mockReturnValue({
+      data: { id: null, status: 'none', cards: [], error: null },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+    mocks.useQuiz.mockReturnValue({
+      data: { id: null, status: 'none', questions: [], error: null },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     })
   })
 
@@ -200,5 +218,78 @@ describe('DocumentViewPage', () => {
     expect(screen.getByText('What is the goal?')).toBeInTheDocument()
     expect(screen.getByText('To ship a working product.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'p. 2' })).toBeInTheDocument()
+  })
+
+  it('opens the Study panel and pages through flashcards', () => {
+    mocks.useDocument.mockReturnValue({
+      data: document_('ready'),
+      isLoading: false,
+      isError: false,
+    })
+    mocks.useFlashcards.mockReturnValue({
+      data: {
+        id: 'f1',
+        status: 'succeeded',
+        cards: [
+          { front: 'What is alpha?', back: 'The first letter.' },
+          { front: 'What is beta?', back: 'The second letter.' },
+        ],
+        error: null,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /study this document/i }))
+
+    expect(screen.getByText('Card 1 of 2')).toBeInTheDocument()
+    expect(screen.getByText('What is alpha?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next card' }))
+
+    expect(screen.getByText('Card 2 of 2')).toBeInTheDocument()
+    expect(screen.getByText('What is beta?')).toBeInTheDocument()
+  })
+
+  it('runs a quiz and shows the score', () => {
+    mocks.useDocument.mockReturnValue({
+      data: document_('ready'),
+      isLoading: false,
+      isError: false,
+    })
+    mocks.useQuiz.mockReturnValue({
+      data: {
+        id: 'q1',
+        status: 'succeeded',
+        questions: [
+          {
+            question: 'Which is alpha?',
+            options: ['alpha', 'beta', 'gamma', 'delta'],
+            answer_index: 0,
+            explanation: 'Alpha is first.',
+          },
+        ],
+        error: null,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    })
+
+    renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /study this document/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Quiz' }))
+
+    expect(screen.getByText('Which is alpha?')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /alpha/i }))
+    expect(screen.getByText(/correct!/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /see my score/i }))
+    expect(screen.getByText('1 / 1')).toBeInTheDocument()
   })
 })

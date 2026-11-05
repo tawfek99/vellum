@@ -18,10 +18,17 @@ from app.schemas.document import (
     DocumentUpdate,
 )
 from app.schemas.qa import AskQuestion, QaExchangeRead, QaHistory
+from app.schemas.study import (
+    FlashcardRead,
+    FlashcardsRead,
+    QuizQuestionRead,
+    QuizRead,
+)
 from app.schemas.summary import SummaryKeyPoint, SummaryRead
 from app.services import documents as document_service
 from app.services import qa as qa_service
 from app.services import storage
+from app.services import study as study_service
 from app.services import summaries as summary_service
 
 router = APIRouter(prefix="/documents")
@@ -245,3 +252,91 @@ async def get_qa_history(
 ) -> QaHistory:
     exchanges = await qa_service.get_history(db, profile.id, document_id)
     return QaHistory(items=[_to_exchange_read(exchange) for exchange in exchanges])
+
+
+def _to_flashcards_read(generation) -> FlashcardsRead:  # noqa: ANN001
+    if generation is None:
+        return FlashcardsRead(status="none")
+    result = generation.result or {}
+    return FlashcardsRead(
+        id=generation.id,
+        status=generation.status,
+        cards=[FlashcardRead(**card) for card in result.get("cards", [])],
+        error=generation.error,
+    )
+
+
+def _to_quiz_read(generation) -> QuizRead:  # noqa: ANN001
+    if generation is None:
+        return QuizRead(status="none")
+    result = generation.result or {}
+    return QuizRead(
+        id=generation.id,
+        status=generation.status,
+        questions=[QuizQuestionRead(**item) for item in result.get("questions", [])],
+        error=generation.error,
+    )
+
+
+@router.post(
+    "/{document_id}/flashcards",
+    response_model=FlashcardsRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate flashcards",
+)
+async def create_flashcards(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> FlashcardsRead:
+    generation = await study_service.create_study_request(
+        db, profile.id, document_id, "flashcards"
+    )
+    return _to_flashcards_read(generation)
+
+
+@router.get(
+    "/{document_id}/flashcards",
+    response_model=FlashcardsRead,
+    summary="Get the latest flashcards",
+)
+async def get_flashcards(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> FlashcardsRead:
+    await document_service.get_document(db, profile.id, document_id)
+    generation = await study_service.get_latest_study(
+        db, profile.id, document_id, "flashcards"
+    )
+    return _to_flashcards_read(generation)
+
+
+@router.post(
+    "/{document_id}/quiz",
+    response_model=QuizRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate a quiz",
+)
+async def create_quiz(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> QuizRead:
+    generation = await study_service.create_study_request(db, profile.id, document_id, "quiz")
+    return _to_quiz_read(generation)
+
+
+@router.get(
+    "/{document_id}/quiz",
+    response_model=QuizRead,
+    summary="Get the latest quiz",
+)
+async def get_quiz(
+    document_id: uuid.UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    profile: Annotated[Profile, Depends(get_current_profile)],
+) -> QuizRead:
+    await document_service.get_document(db, profile.id, document_id)
+    generation = await study_service.get_latest_study(db, profile.id, document_id, "quiz")
+    return _to_quiz_read(generation)

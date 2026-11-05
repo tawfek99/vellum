@@ -12,6 +12,16 @@ QA_SYSTEM = (
     "plainly instead of guessing."
 )
 
+FLASHCARDS_SYSTEM = (
+    "You are a careful study assistant. You turn documents into accurate, "
+    "concise flashcards grounded strictly in the source material."
+)
+
+QUIZ_SYSTEM = (
+    "You are a careful study assistant. You write accurate multiple-choice quiz "
+    "questions that are grounded strictly in the source material."
+)
+
 
 def summary_user_prompt(text: str) -> str:
     return f"""Summarize the document below for a student.
@@ -64,4 +74,52 @@ DOCUMENT EXCERPTS:
 
 QUESTION:
 {question}
+"""
+
+
+def flashcards_user_prompt(text: str) -> str:
+    return f"""Create study flashcards from the document below.
+
+Return ONLY valid JSON (no markdown fences) with exactly this shape:
+{{
+  "cards": [
+    {{"front": "a question or term", "back": "a concise answer or definition"}}
+  ]
+}}
+
+Rules:
+- Create 8 to 12 cards.
+- One idea per card; keep fronts short and backs to one or two sentences.
+- Cover the most important concepts, terms, and facts.
+- Do not invent facts that are not in the document.
+
+DOCUMENT:
+{text}
+"""
+
+
+def quiz_user_prompt(text: str) -> str:
+    return f"""Create a multiple-choice quiz from the document below.
+
+Return ONLY valid JSON (no markdown fences) with exactly this shape:
+{{
+  "questions": [
+    {{
+      "question": "the question",
+      "options": ["option 1", "option 2", "option 3", "option 4"],
+      "answer_index": 0,
+      "explanation": "why the answer is correct"
+    }}
+  ]
+}}
+
+Rules:
+- Create 5 to 8 questions.
+- Exactly 4 options per question.
+- "answer_index" is the 0-based index of the correct option (0-3).
+- Only one option is correct; the others should be plausible.
+- Base every question on the document; do not invent facts.
+
+DOCUMENT:
+{text}
 """
