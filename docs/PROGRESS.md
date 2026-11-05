@@ -96,7 +96,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 16 | Documents UI: paper cards + upload dropzone + status badges + polling | ✅ Confirmed | Scanned PDFs shown as "Scanned PDF" (OCR deferred); PDF viewer at L12 |
 | 17 | Auth: JWT verification leeway (30s) + JWKS warm-up | ✅ Implemented | Fixes intermittent 401 from PyJWT `iat` clock skew |
 | 18 | PDF viewer: react-pdf continuous scroll + page/zoom controls | ✅ Confirmed | Signed URL only; no storage creds in the client; lazily loaded |
-| 19 | AI provider: Gemini free tier via OpenAI-compatible endpoint | ✅ Confirmed | `gemini-3.8-flash`; summary = paragraph + page-cited key points |
+| 19 | AI provider: Gemini free tier via OpenAI-compatible endpoint | ✅ Confirmed | `gemini-3.5-flash-lite` (switched from `gemini-3.8-flash`, which intermittently 503'd/timed out); summary = paragraph + page-cited key points |
 
 ### 3b. External services — Supabase
 
@@ -120,7 +120,7 @@ Both `.env` files are gitignored. `.env.example` files document the keys with no
 
 > **Pooler note:** the connection uses Supabase's **transaction pooler** (pgbouncer), which does not support server-side prepared statements. Both the app engine (`app/db/session.py`) and Alembic (`alembic/env.py`) set `statement_cache_size=0` + `prepared_statement_cache_size=0`. The URL also carries `?ssl=require`.
 
-> **AI provider:** **Gemini free tier** via `https://generativelanguage.googleapis.com/v1beta/openai`, model `gemini-3.8-flash`. Key lives in `backend/.env` as `AI_API_KEY` (never committed); swap providers via `AI_PROVIDER` / `AI_BASE_URL` / `AI_MODEL`.
+> **AI provider:** **Gemini free tier** via `https://generativelanguage.googleapis.com/v1beta/openai`, model `gemini-3.5-flash-lite` (fast + reliable; `gemini-3.8-flash` intermittently returned 503/timeouts). Key lives in `backend/.env` as `AI_API_KEY` (never committed); swap providers via `AI_PROVIDER` / `AI_BASE_URL` / `AI_MODEL`.
 
 ---
 
@@ -458,12 +458,20 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck · oxlint 0 · vitest `41 passed` · build ok.
 - **Commit:** `e685986`.
 
+### 2026-11-05 — AI reliability + wide animated AI panel (fix) ✅
+- **"Ask" broken:** the latest Q&A job had failed with an **empty** error — the signature of an `httpx` timeout. The configured `gemini-3.8-flash` was intermittently returning **503/overloaded** and sometimes hanging >25s; the lite models answered in ~1s.
+- **Model switch:** `AI_MODEL=gemini-3.5-flash-lite` in `backend/.env` (gitignored). A grounded answer with page cites now returns in **~0.8s**.
+- **Resilience:** AI timeout raised to **120s**; timeouts now fail fast with a clear *"provider took too long"* message (no double wait); job handlers store `str(exc) or type(exc).__name__` so errors are never blank.
+- **AI panel layout:** fixed the horizontal overflow (**`min-w-0`** on the PDF column); Summary/Ask now **animate their width open** from 0 to `clamp(480px, 48%, 760px)` (about half the page — the AI section gets priority), and the PDF re-fits after the transition. Mobile keeps the full-screen overlay.
+- **Evidence:** 61 backend + 41 frontend tests · ruff/oxlint clean · typecheck + build ok · live model answer 0.8s.
+- **Commit:** `73d6b15`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`, `e685986`). **Working tree clean.**
-- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`, background job worker; **61 tests pass**.
+- **Where we are:** Levels 0–15 complete; Level 15 committed (`1c405f0`) + document-folder fix (`2c8af76`) + UI polish (`255202f`, `e685986`) + AI reliability/panel fix (`73d6b15`). **Working tree clean.**
+- **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A), `/search`; AI model `gemini-3.5-flash-lite`; **61 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + fit-to-width PDF reader + AI **Summary**/**Ask** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **41 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
 - **Next action:** **Level 16 — Flashcards & quizzes** (§5).
