@@ -163,7 +163,7 @@ async def handle_answer_job(db: AsyncSession, job: Job) -> dict[str, Any]:
         result = await service.answer_question(question, context, history)
     except Exception as exc:  # noqa: BLE001 - record provider failures
         generation.status = "failed"
-        generation.error = str(exc)[:1000]
+        generation.error = (str(exc) or type(exc).__name__)[:1000]
         await db.commit()
         raise
 

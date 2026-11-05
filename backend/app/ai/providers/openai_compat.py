@@ -59,7 +59,7 @@ class OpenAICompatibleProvider:
         last_error: Exception | None = None
         for attempt in range(2):
             try:
-                async with httpx.AsyncClient(timeout=90) as client:
+                async with httpx.AsyncClient(timeout=120) as client:
                     response = await client.post(
                         f"{self.base_url}/chat/completions",
                         headers={
@@ -81,6 +81,12 @@ class OpenAICompatibleProvider:
                 response.raise_for_status()
                 data = response.json()
                 return str(data["choices"][0]["message"]["content"])
+            except httpx.TimeoutException as exc:
+                # A slow provider is unlikely to be fast on an immediate retry;
+                # fail now with a clear message instead of waiting twice.
+                raise RuntimeError(
+                    "The AI provider took too long to respond. Please try again."
+                ) from exc
             except httpx.HTTPError as exc:
                 last_error = exc
                 if attempt == 0:

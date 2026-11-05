@@ -86,7 +86,7 @@ async def handle_summarize_job(db: AsyncSession, job: Job) -> dict[str, Any]:
         result = await service.summarize_document(text)
     except Exception as exc:  # noqa: BLE001 - record provider failures
         generation.status = "failed"
-        generation.error = str(exc)[:1000]
+        generation.error = (str(exc) or type(exc).__name__)[:1000]
         await db.commit()
         raise
 

@@ -98,6 +98,7 @@ export function DocumentViewPage() {
       : askQuestion.error
         ? 'Something went wrong while asking.'
         : null
+  const showAside = panel !== null && !fullscreen
 
   function handleJumpToPage(page: number) {
     setJumpTarget({ page, nonce: Date.now() })
@@ -176,7 +177,7 @@ export function DocumentViewPage() {
       ) : null}
 
       <div className="flex min-h-0 flex-1 gap-4">
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {fullscreen ? null : content.isLoading ? (
             <div className="flex flex-1 items-center justify-center rounded-xl bg-cream-100">
               <Spinner className="size-6" />
@@ -195,9 +196,19 @@ export function DocumentViewPage() {
           )}
         </div>
 
-        {panel && !fullscreen ? (
-          <aside className="fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4 lg:static lg:z-auto lg:w-[480px] lg:shrink-0 lg:overflow-visible lg:bg-transparent lg:p-0">
-            {panel === 'summary' ? (
+        <aside
+          aria-hidden={!showAside}
+          className={cn(
+            showAside ? 'fixed inset-0 z-40 overflow-y-auto bg-cream-100 p-4' : 'hidden',
+            'lg:static lg:z-auto lg:block lg:shrink-0 lg:overflow-hidden lg:bg-transparent lg:p-0',
+            'lg:transition-[width,opacity] lg:duration-300 lg:ease-out',
+            showAside
+              ? 'lg:w-[clamp(480px,48%,760px)] lg:opacity-100'
+              : 'lg:pointer-events-none lg:w-0 lg:opacity-0',
+          )}
+        >
+          {showAside ? (
+            panel === 'summary' ? (
               <SummaryPanel
                 summary={summaryQuery.data}
                 isLoading={summaryQuery.isLoading}
@@ -222,9 +233,9 @@ export function DocumentViewPage() {
                 onJumpToPage={handleJumpToPage}
                 onRetry={() => void qaQuery.refetch()}
               />
-            )}
-          </aside>
-        ) : null}
+            )
+          ) : null}
+        </aside>
       </div>
 
       {fullscreen && url ? (
@@ -277,8 +288,8 @@ function PdfViewer({
   const [pdfError, setPdfError] = useState<string | null>(null)
 
   // Measure the available width once, then on window resize / layout changes.
-  // Deliberately no ResizeObserver: observing the container while pages resize
-  // can create a measure -> re-render -> measure feedback loop.
+  // The side panel animates its width, so re-fit again after the transition
+  // settles (instead of observing continuously, which re-renders every page).
   useEffect(() => {
     const measure = () => {
       const element = containerRef.current
@@ -287,8 +298,12 @@ function PdfViewer({
       if (width > 0) setContainerWidth((current) => (current === width ? current : width))
     }
     measure()
+    const settle = window.setTimeout(measure, 340)
     window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
+    return () => {
+      window.clearTimeout(settle)
+      window.removeEventListener('resize', measure)
+    }
   }, [layoutKey])
 
   // Jump to a page when a summary citation is clicked.
