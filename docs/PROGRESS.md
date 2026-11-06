@@ -476,11 +476,17 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** 70 backend + 43 frontend tests · ruff/oxlint clean · typecheck + build ok · live model produced 8 flashcards (~1.2s) and 6 valid quiz questions.
 - **Commit:** `af37b06`. **Status:** Level 16 done; ready for Level 17 (Hardening + deploy).
 
+### 2026-11-06 — Flashcard deck transition (polish) ✅
+- Navigating the deck with the arrows now uses a **playing-card animation**: the current card sinks down and back into a two-layer stack while the next card rises to the front (mirrored when going backward), with visible stacked-card edges behind the top card.
+- Flip (click / Space) and arrow-key navigation are unchanged.
+- **Evidence:** typecheck · oxlint 0 · vitest `43 passed` · build ok.
+- **Commit:** `ecbd155`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–16 complete; Level 16 committed (`af37b06`). **Working tree clean.**
+- **Where we are:** Levels 0–16 complete; Level 16 committed (`af37b06`) + deck animation (`ecbd155`). **Working tree clean.**
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A + flashcards + quiz), `/search`; AI model `gemini-3.5-flash-lite`; **70 tests pass**.
 - **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + PDF reader + AI **Summary**/**Ask**/**Study** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **43 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
