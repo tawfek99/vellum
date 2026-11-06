@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   Check,
   ChevronLeft,
@@ -224,35 +224,44 @@ function FlashcardDeck({
 }) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
-  const [direction, setDirection] = useState(1)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const [leaving, setLeaving] = useState<{
+    card: Flashcard
+    direction: 1 | -1
+    nonce: number
+  } | null>(null)
   const card = cards[index]
   const progress = ((index + 1) / cards.length) * 100
 
-  function goTo(next: number) {
-    if (next < 0 || next >= cards.length) return
-    setDirection(next > index ? 1 : -1)
-    setIndex(next)
-    setFlipped(false)
-  }
+  const navigate = useCallback(
+    (next: number) => {
+      const current = cards[index]
+      if (!current || next < 0 || next >= cards.length) return
+      const nextDirection: 1 | -1 = next > index ? 1 : -1
+      const nonce = Date.now()
+      setDirection(nextDirection)
+      setLeaving({ card: current, direction: nextDirection, nonce })
+      setIndex(next)
+      setFlipped(false)
+      window.setTimeout(() => {
+        setLeaving((value) => (value?.nonce === nonce ? null : value))
+      }, 400)
+    },
+    [cards, index],
+  )
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'ArrowRight' && index < cards.length - 1) {
-        setDirection(1)
-        setIndex(index + 1)
-        setFlipped(false)
-      } else if (event.key === 'ArrowLeft' && index > 0) {
-        setDirection(-1)
-        setIndex(index - 1)
-        setFlipped(false)
-      } else if (event.key === ' ' || event.key === 'Enter') {
+      if (event.key === 'ArrowRight') navigate(index + 1)
+      else if (event.key === 'ArrowLeft') navigate(index - 1)
+      else if (event.key === ' ' || event.key === 'Enter') {
         event.preventDefault()
         setFlipped((value) => !value)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [index, cards.length])
+  }, [navigate, index])
 
   if (!card) return null
 
@@ -279,38 +288,69 @@ function FlashcardDeck({
         />
       </div>
 
-      <div
-        key={index}
-        className="card-swap"
-        style={{ '--swap-x': `${direction * 20}px` } as CSSProperties}
-      >
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setFlipped((value) => !value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              setFlipped((value) => !value)
-            }
-          }}
-          aria-label={flipped ? 'Show question' : 'Show answer'}
-          className="flashcard-scene h-80 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay-500"
-        >
-          <div className={cn('flashcard-card', flipped && 'is-flipped')}>
-            <div className="flashcard-face">
+      <div key={index} className="relative h-80">
+        <span
+          className="pointer-events-none absolute inset-0 translate-y-4 scale-[0.94] rounded-2xl border border-parchment-200 bg-parchment-50/50"
+          aria-hidden="true"
+        />
+        <span
+          className="pointer-events-none absolute inset-0 translate-y-2 scale-[0.97] rounded-2xl border border-parchment-200 bg-parchment-50/75"
+          aria-hidden="true"
+        />
+
+        {leaving ? (
+          <div
+            className={cn(
+              'pointer-events-none absolute inset-0 z-20',
+              leaving.direction === 1 ? 'deck-out-next' : 'deck-out-prev',
+            )}
+            aria-hidden="true"
+          >
+            <div className="flex h-full flex-col gap-4 rounded-2xl border border-parchment-200 bg-parchment-50 p-8 shadow-[0_24px_50px_-28px_rgba(61,45,28,0.55)]">
               <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-clay-600">
                 Question
               </span>
-              <p className="font-serif text-xl leading-relaxed text-ink-900">{card.front}</p>
-              <span className="mt-auto text-[11px] text-ink-400">Click to reveal</span>
+              <p className="font-serif text-xl leading-relaxed text-ink-900">
+                {leaving.card.front}
+              </p>
             </div>
-            <div className="flashcard-face flashcard-back">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-clay-600">
-                Answer
-              </span>
-              <p className="text-[15px] leading-7 text-ink-700">{card.back}</p>
-              <span className="mt-auto text-[11px] text-ink-400">Click to flip back</span>
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            'absolute inset-0 z-10',
+            direction === 1 ? 'deck-in-next' : 'deck-in-prev',
+          )}
+        >
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setFlipped((value) => !value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                setFlipped((value) => !value)
+              }
+            }}
+            aria-label={flipped ? 'Show question' : 'Show answer'}
+            className="flashcard-scene h-full cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-clay-500"
+          >
+            <div className={cn('flashcard-card', flipped && 'is-flipped')}>
+              <div className="flashcard-face">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-clay-600">
+                  Question
+                </span>
+                <p className="font-serif text-xl leading-relaxed text-ink-900">{card.front}</p>
+                <span className="mt-auto text-[11px] text-ink-400">Click to reveal</span>
+              </div>
+              <div className="flashcard-face flashcard-back">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-clay-600">
+                  Answer
+                </span>
+                <p className="text-[15px] leading-7 text-ink-700">{card.back}</p>
+                <span className="mt-auto text-[11px] text-ink-400">Click to flip back</span>
+              </div>
             </div>
           </div>
         </div>
@@ -319,7 +359,7 @@ function FlashcardDeck({
       <div className="flex items-center justify-center gap-3">
         <button
           type="button"
-          onClick={() => goTo(index - 1)}
+          onClick={() => navigate(index - 1)}
           disabled={index === 0}
           aria-label="Previous card"
           className={controlButton}
@@ -336,7 +376,7 @@ function FlashcardDeck({
         </button>
         <button
           type="button"
-          onClick={() => goTo(index + 1)}
+          onClick={() => navigate(index + 1)}
           disabled={index === cards.length - 1}
           aria-label="Next card"
           className={controlButton}
