@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · plus docs/fix commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · `de3b7e7` (demo) · plus docs/fix commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -63,6 +63,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | Frontend dev server | `cd frontend` → `npm run dev` | `http://localhost:5173` |
 | Frontend checks | `cd frontend` → `npm run typecheck` / `npm run lint` / `npm run test` / `npm run build` | |
 | Create migration | `cd backend` → `.\.venv\Scripts\alembic.exe revision --autogenerate -m "<msg>"` | needs DB URL in `.env` |
+| Seed/refresh demo | `cd backend` → `.\.venv\Scripts\python.exe -m scripts.seed_demo` | creates `demo@notetaker.app` with sample folders/notes/PDFs |
 
 **Key file map (backend):** `app/main.py` (app factory) · `app/core/config.py` (settings) · `app/db/base.py` (declarative base) · `app/db/session.py` (engine/`get_db`) · `app/api/v1/router.py` (route aggregation) · `alembic/env.py` (migrations read settings).
 
@@ -71,6 +72,8 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 **Design system (locked):** warm paper/books — cream bg, parchment surfaces, ink text, terracotta ("clay") accent. Tokens in `src/index.css` `@theme`. Fonts: Noto Serif (display) + Noto Sans (body) via Google Fonts.
 
 **Git identity:** currently a PLACEHOLDER — `Tawfiq (placeholder) <placeholder@example.com>` set with `--local`. Amend commit `27101e8` once real name/email is provided.
+
+**Demo mode:** the `/login` page shows a **"Try the demo"** button when `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` are set in `frontend/.env`. It signs into the public demo account `demo@notetaker.app` (password `DemoNotes2026!`) seeded by `python -m scripts.seed_demo` with 3 folders, 5 notes, and 2 ready PDFs. Credentials are public by design; the account only sees seeded sample data.
 
 ---
 
@@ -97,6 +100,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 | 17 | Auth: JWT verification leeway (30s) + JWKS warm-up | ✅ Implemented | Fixes intermittent 401 from PyJWT `iat` clock skew |
 | 18 | PDF viewer: react-pdf continuous scroll + page/zoom controls | ✅ Confirmed | Signed URL only; no storage creds in the client; lazily loaded |
 | 19 | AI provider: Gemini free tier via OpenAI-compatible endpoint | ✅ Confirmed | `gemini-3.5-flash-lite` (switched from `gemini-3.8-flash`, which intermittently 503'd/timed out); summary = paragraph + page-cited key points |
+| 20 | Demo mode: one-click seed account behind env vars | ✅ Implemented | Public `demo@notetaker.app`; 3 folders / 5 notes / 2 PDFs; real data untouched |
 
 ### 3b. External services — Supabase
 
@@ -243,10 +247,10 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Set env vars (`DATABASE_URL`, `SUPABASE_*`, `AI_*` with `AI_MODEL=gemini-3.5-flash-lite`).
 - Cold-start handled by the job + polling pattern.
 
-**Recruiter access (from earlier discussion):**
-- Add a one-click **"Try a demo"** entry on the login page that signs into a seeded demo account (sample folders/notes/documents), keeping real auth intact.
+**Demo mode (done ahead of deploy):**
+- ✅ The `/login` page has a one-click **"Try the demo"** entry backed by the seeded `demo@notetaker.app` account (§2). It works locally and will work unchanged once deployed.
 
-**Acceptance:** live on a public URL with green checks, and a recruiter can explore a populated demo without touching real data.
+**Acceptance:** live on a public URL with green checks, and a recruiter can explore the populated demo via the one-click button.
 
 ### Design system (locked for the app)
 - **Direction:** warm, paper/books. Cream background, parchment surfaces, warm-brown "ink" text, terracotta ("clay") accent; sage/ochre for status. Tokens in `src/index.css` under `@theme`.
@@ -482,13 +486,19 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Evidence:** typecheck · oxlint 0 · vitest `43 passed` · build ok.
 - **Commit:** `ecbd155`.
 
+### 2026-11-09 — Demo mode ✅
+- Added a **"Try the demo"** button on `/login` (shown when `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` are set) that signs into a public demo account. Keeps real auth intact; the demo user only sees its own seeded data.
+- **Backend:** `scripts/seed_demo.py` (idempotent) creates/refreshes the demo auth user via the Supabase Admin API and seeds **3 folders, 5 notes, 2 ready PDFs** (uploaded to Storage + chunked for AI).
+- **Verified:** live demo sign-in returns a session; 70 backend + 45 frontend tests; typecheck/lint/build clean.
+- **Commit:** `de3b7e7`.
+
 ---
 
 ## 7. Current state / next action
 
-- **Where we are:** Levels 0–16 complete; Level 16 committed (`af37b06`) + deck animation (`ecbd155`). **Working tree clean.**
+- **Where we are:** Levels 0–16 complete; Level 16 committed (`af37b06`, deck animation `ecbd155`) + **demo mode** (`de3b7e7`). **Working tree clean.**
 - **Backend:** running on `:8000` against Supabase; `/health`, `/auth/me`, `/folders`, `/notes`, `/documents` (+ summary + Q&A + flashcards + quiz), `/search`; AI model `gemini-3.5-flash-lite`; **70 tests pass**.
-- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + PDF reader + AI **Summary**/**Ask**/**Study** panels + global **Search**; documents can be dragged into folders and appear in the folder view; **43 tests pass**.
+- **Frontend:** running on `:5173`; shell + folders + torn-paper notes + WYSIWYG editor + documents UI + PDF reader + AI **Summary**/**Ask**/**Study** panels + global **Search** + **one-click demo**; **45 tests pass**.
 - **Closed:** the earlier "Summarize does nothing" report was confirmed working by the user (stale bundle / scanned PDF).
 - **Next action:** **Level 17 — Hardening + deploy** (§5), including the recruiter **demo mode**.
 - **Session resume:** start a new session and say **"Read docs/PROGRESS.md and continue"**.
