@@ -7,6 +7,7 @@ import { Link } from 'react-router'
 import { useAppDnd } from '@/features/dnd/context'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/date'
+import { toPlainText } from '@/lib/markdown'
 import { tiltFor } from '@/lib/paper'
 import type { Note } from '@/types/note'
 
@@ -62,7 +63,7 @@ export function NoteCard({ note, folderName, onTogglePin, onDelete }: NoteCardPr
             {note.title}
           </h3>
           <p className="mt-1.5 line-clamp-3 text-sm leading-6 text-ink-500">
-            {note.content.trim() || 'No content yet.'}
+            {toPlainText(note.content) || 'No content yet.'}
           </p>
         </Link>
       </div>

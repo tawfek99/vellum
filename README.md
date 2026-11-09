@@ -15,6 +15,28 @@ and turn them into flashcards and quizzes.
 | Auth/Files | Supabase Auth, Supabase Storage |
 | AI         | Gemini (via OpenAI-compatible endpoint) behind an `AIService` abstraction |
 
+## Screenshots
+
+| One-click demo | Dashboard |
+| --- | --- |
+| ![Login with one-click demo](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard.png) |
+
+| Notes | Documents |
+| --- | --- |
+| ![Notes](docs/screenshots/03-notes.png) | ![Documents](docs/screenshots/04-documents.png) |
+
+| PDF reader | AI summary with page citations |
+| --- | --- |
+| ![PDF reader](docs/screenshots/05-pdf-viewer.png) | ![AI summary](docs/screenshots/06-ai-summary.png) |
+
+| Flashcards | Flashcard answer (3D flip) |
+| --- | --- |
+| ![Flashcards](docs/screenshots/07-flashcards.png) | ![Flashcard answer](docs/screenshots/08-flashcard-answer.png) |
+
+**Global search** — notes and documents, with highlighted snippets:
+
+![Global search](docs/screenshots/09-search.png)
+
 ## Repository layout
 
 ```

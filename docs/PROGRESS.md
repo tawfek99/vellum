@@ -503,6 +503,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Remote: **https://github.com/tawfek99/vellum** (public).
 - **Note:** re-authoring rewrote every commit hash; hashes in older log entries are pre-rewrite references.
 
+### 2026-11-09 — Screenshots + README polish ✅
+- Added real screenshots of the populated demo account to `docs/screenshots/` and a gallery to the README.
+- Polish found while capturing: note-card previews now strip markdown syntax (`frontend/src/lib/markdown.ts`), and search snippets strip `[[page N]]` markers + markdown (`services/search.py`).
+- Captured with a headless Playwright browser against the local demo account (temp install, not added to the project).
+- **Evidence:** 70 backend + 45 frontend tests · ruff/oxlint clean · build ok.
+
 ---
 
 ## 7. Current state / next action

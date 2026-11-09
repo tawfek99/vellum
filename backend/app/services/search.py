@@ -7,6 +7,7 @@ replace the pre-filter later without changing the API.
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,6 +23,21 @@ from app.models.note import Note
 MAX_CANDIDATES = 200
 MAX_SNIPPET_CHARS = 180
 TITLE_WEIGHT = 5
+
+_PAGE_MARKER = re.compile(r"\[\[page\s+\d+\]\]", re.IGNORECASE)
+_LINK = re.compile(r"!?\[([^\]]*)\]\([^)]*\)")
+_MARKDOWN = re.compile(
+    r"(?:\*\*|__|~~|`|\*|_|^#{1,6}\s+|^>\s?|^[ \t]*[-*+]\s+|^[ \t]*\d+\.\s+)",
+    re.MULTILINE,
+)
+
+
+def _plain_text(body: str) -> str:
+    """Strip page markers and common markdown so snippets read cleanly."""
+    text = _PAGE_MARKER.sub(" ", body)
+    text = _LINK.sub(r"\1", text)
+    text = _MARKDOWN.sub("", text)
+    return " ".join(text.split())
 
 
 @dataclass(frozen=True)
@@ -49,7 +65,7 @@ def _score(title: str, body: str, terms: list[str]) -> int:
 
 
 def _snippet(body: str, terms: list[str], *, max_length: int = MAX_SNIPPET_CHARS) -> str:
-    text = " ".join(body.split())
+    text = _plain_text(body)
     if not text:
         return ""
 
