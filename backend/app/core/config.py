@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Note Taker API"
+    app_name: str = "Vellum API"
     environment: str = "development"
     api_v1_prefix: str = "/api/v1"
 

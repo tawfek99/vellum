@@ -38,7 +38,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex h-16 items-center gap-2.5 px-5">
         <BookOpen className="size-5 text-clay-600" aria-hidden="true" />
         <span className="font-serif text-lg font-semibold tracking-tight text-ink-900">
-          Note Taker
+          Vellum
         </span>
       </div>
 

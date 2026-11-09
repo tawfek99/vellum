@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "note-taker-backend"
+name = "vellum-backend"
 version = "0.1.0"
-description = "FastAPI backend for the Note Taker AI notes & document manager."
+description = "FastAPI backend for Vellum, the AI notes & document manager."
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

@@ -59,7 +59,7 @@ export function LoginPage() {
   return (
     <main className="flex min-h-full items-center justify-center bg-cream-100 px-4 py-12">
       <div className="w-full max-w-md rounded-2xl border border-parchment-200 bg-parchment-50 p-8 shadow-[0_24px_60px_-30px_rgba(61,45,28,0.45)] sm:p-10">
-        <p className="font-serif text-base font-semibold tracking-tight text-ink-900">Note Taker</p>
+        <p className="font-serif text-base font-semibold tracking-tight text-ink-900">Vellum</p>
 
         <h1 className="mt-7 font-serif text-3xl font-semibold tracking-tight text-ink-900">
           Welcome

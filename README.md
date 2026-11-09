@@ -1,8 +1,9 @@
-# Note Taker — AI Notes & Document Manager
+# Vellum — AI Notes & Document Manager
 
 A production-quality portfolio project: an AI-powered notes and document management
 web app for students and professionals. Store notes, organize them into folders,
-upload and view PDFs, and use AI to summarize documents and answer questions about them.
+upload and view PDFs, and use AI to summarize documents, answer questions about them,
+and turn them into flashcards and quizzes.
 
 ## Stack
 
@@ -12,12 +13,12 @@ upload and view PDFs, and use AI to summarize documents and answer questions abo
 | Backend    | FastAPI, Python, SQLAlchemy (async), Alembic, Pydantic v2 |
 | Database   | PostgreSQL (via Supabase) |
 | Auth/Files | Supabase Auth, Supabase Storage |
-| AI         | Provider-abstracted (`AIService`); DeepSeek initially |
+| AI         | Gemini (via OpenAI-compatible endpoint) behind an `AIService` abstraction |
 
 ## Repository layout
 
 ```
-note-taker/
+vellum/
 ├── backend/    # FastAPI service
 ├── frontend/   # React SPA
 └── docs/       # architecture notes (optional)

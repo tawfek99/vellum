@@ -13,7 +13,7 @@ describe('SidebarContent', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Note Taker')).toBeInTheDocument()
+    expect(screen.getByText('Vellum')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Notes' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Documents' })).toBeInTheDocument()
