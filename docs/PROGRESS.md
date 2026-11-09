@@ -1,4 +1,4 @@
-# AI Notes & Document Manager — Plan + Progress Log
+# Vellum — AI Notes & Document Manager — Plan + Progress Log
 
 > **Mirrored in TWO places — keep both in sync (write one, then copy):**
 > - In-repo: `docs/PROGRESS.md`
@@ -31,9 +31,9 @@
 
 ## 1. Project summary
 
-AI-powered notes and document management web app for students and professionals.
+**Vellum** — an AI-powered notes and document management web app for students and professionals.
 Store notes, organize into folders, upload/view PDFs, and use AI to summarize,
-answer questions, and (eventually) generate flashcards/quizzes.
+answer questions, and generate flashcards/quizzes.
 
 **Stack:** React + TypeScript + Vite + Tailwind + React Router + TanStack Query (frontend),
 FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Auth + Storage via Supabase.
@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · `de3b7e7` (demo) · plus docs/fix commits.
+**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · `de3b7e7` (demo) · `1fb368e` (Vellum rename) · plus docs/fix commits.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -491,6 +491,12 @@ Detailed future-level plans below are a guide and may be adjusted.
 - **Backend:** `scripts/seed_demo.py` (idempotent) creates/refreshes the demo auth user via the Supabase Admin API and seeds **3 folders, 5 notes, 2 ready PDFs** (uploaded to Storage + chunked for AI).
 - **Verified:** live demo sign-in returns a session; 70 backend + 45 frontend tests; typecheck/lint/build clean.
 - **Commit:** `de3b7e7`.
+
+### 2026-11-09 — Product rename: Vellum ✅
+- Renamed the product from "Note Taker" to **Vellum** everywhere it is user-visible or published: browser `<title>`, sidebar brand, login page, backend `app_name` (OpenAPI/docs title), `.env.example`, `pyproject.toml`, and the README (title, description, repo tree).
+- Left the local folder name and the local `DATABASE_URL` database name unchanged (filesystem/dev only).
+- **Evidence:** typecheck · oxlint 0 · vitest `45 passed` · build ok · backend `70 passed` · ruff clean.
+- **Commit:** `1fb368e`.
 
 ---
 
