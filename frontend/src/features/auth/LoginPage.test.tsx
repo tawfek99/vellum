@@ -8,6 +8,9 @@ const { signInWithPassword } = vi.hoisted(() => ({ signInWithPassword: vi.fn() }
 vi.mock('@/lib/supabase', () => ({
   supabase: { auth: { signInWithPassword } },
 }))
+vi.mock('@/config/env', () => ({
+  env: { demoEmail: 'demo@example.com', demoPassword: 'demo-pass' },
+}))
 
 function renderLogin() {
   return render(
@@ -56,5 +59,28 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not sign you in/i)
+  })
+
+  it('signs into the demo account with one click', async () => {
+    signInWithPassword.mockResolvedValue({ error: null })
+    renderLogin()
+
+    fireEvent.click(screen.getByRole('button', { name: /try the demo/i }))
+
+    await waitFor(() =>
+      expect(signInWithPassword).toHaveBeenCalledWith({
+        email: 'demo@example.com',
+        password: 'demo-pass',
+      }),
+    )
+  })
+
+  it('shows an error if the demo is unavailable', async () => {
+    signInWithPassword.mockResolvedValue({ error: { message: 'boom' } })
+    renderLogin()
+
+    fireEvent.click(screen.getByRole('button', { name: /try the demo/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/demo is unavailable/i)
   })
 })

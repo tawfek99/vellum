@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
+import { env } from '@/config/env'
 import { supabase } from '@/lib/supabase'
 
 export function LoginPage() {
@@ -13,6 +15,8 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [demoSubmitting, setDemoSubmitting] = useState(false)
+  const demoAvailable = Boolean(env.demoEmail && env.demoPassword)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -26,6 +30,26 @@ export function LoginPage() {
     if (signInError) {
       setError('We could not sign you in. Check your email and password and try again.')
       setSubmitting(false)
+      return
+    }
+
+    navigate('/', { replace: true })
+  }
+
+  async function handleDemo() {
+    if (!env.demoEmail || !env.demoPassword || demoSubmitting || submitting) return
+
+    setError(null)
+    setDemoSubmitting(true)
+
+    const { error: demoError } = await supabase.auth.signInWithPassword({
+      email: env.demoEmail,
+      password: env.demoPassword,
+    })
+
+    if (demoError) {
+      setError('The demo is unavailable right now. Please try again in a moment.')
+      setDemoSubmitting(false)
       return
     }
 
@@ -82,10 +106,34 @@ export function LoginPage() {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full" disabled={submitting || demoSubmitting}>
             {submitting ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
+
+        {demoAvailable ? (
+          <>
+            <div className="mt-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-parchment-200" aria-hidden="true" />
+              <span className="text-xs text-ink-400">or</span>
+              <span className="h-px flex-1 bg-parchment-200" aria-hidden="true" />
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-4 w-full"
+              onClick={handleDemo}
+              disabled={demoSubmitting || submitting}
+            >
+              <Sparkles className="size-4" aria-hidden="true" />
+              {demoSubmitting ? 'Opening the demo…' : 'Try the demo'}
+            </Button>
+            <p className="mt-2 text-center text-xs text-ink-400">
+              Explore sample notes and documents — no account needed.
+            </p>
+          </>
+        ) : null}
       </div>
     </main>
   )

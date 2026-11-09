@@ -20,4 +20,7 @@ export const env = {
   apiBaseUrl: requireValue('VITE_API_BASE_URL', import.meta.env.VITE_API_BASE_URL),
   supabaseUrl: requireValue('VITE_SUPABASE_URL', import.meta.env.VITE_SUPABASE_URL),
   supabaseAnonKey: requireValue('VITE_SUPABASE_ANON_KEY', import.meta.env.VITE_SUPABASE_ANON_KEY),
+  // Optional demo credentials (public by design; the account only sees seeded data).
+  demoEmail: import.meta.env.VITE_DEMO_EMAIL?.trim() || null,
+  demoPassword: import.meta.env.VITE_DEMO_PASSWORD || null,
 } as const

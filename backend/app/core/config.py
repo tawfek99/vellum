@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     ai_model: str = "deepseek-chat"
     ai_base_url: str = "https://api.deepseek.com"
 
+    # Demo account (public credentials used by the "Try the demo" button on the
+    # login page). Seeded by `python -m scripts.seed_demo`.
+    demo_email: str = "demo@notetaker.app"
+    demo_password: str = "DemoNotes2026!"
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
