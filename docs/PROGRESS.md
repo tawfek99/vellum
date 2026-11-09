@@ -53,7 +53,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Repo root:** `C:\Users\tawfi\OneDrive\Desktop\note taker` (git repo, branch `main`).
 
-**Commits so far:** `27101e8` (L0–2) · `a551f35` (L3) · `b3d09b4` (L4) · `34ff9f0` (L5) · `23a1464`, `0a149fa` (L6) · `4c47f71`, `60dfb45`, `bed4320`, `176dbea` (L7) · `136cb75` (L8) · `aff98cf`, `774202f` (L9) · `5ad6058` (L10) · `1357468` (L11) · `45d7395`, `65ccfb0`, `923d620` (L12) · `d40ef5b`, `1153aef` (L13) · `1b76b91` (L14) · `1c405f0` (L15) · `af37b06` (L16) · `de3b7e7` (demo) · `1fb368e` (Vellum rename) · plus docs/fix commits.
+**Commits:** history re-authored to Tawfek Khalil on 2026-11-09. Older hash references in the log below are pre-rewrite; use `git log` for current hashes.
 
 | Task | Command | Notes |
 |---|---|---|
@@ -71,7 +71,7 @@ FastAPI + SQLAlchemy (async) + Alembic + Pydantic v2 (backend), PostgreSQL + Aut
 
 **Design system (locked):** warm paper/books — cream bg, parchment surfaces, ink text, terracotta ("clay") accent. Tokens in `src/index.css` `@theme`. Fonts: Noto Serif (display) + Noto Sans (body) via Google Fonts.
 
-**Git identity:** currently a PLACEHOLDER — `Tawfiq (placeholder) <placeholder@example.com>` set with `--local`. Amend commit `27101e8` once real name/email is provided.
+**Git identity:** `Tawfek Khalil <281725953+tawfek99@users.noreply.github.com>` (set with `--local`). The full history was **re-authored on 2026-11-09**, so hashes referenced in older log entries below are pre-rewrite references — content is unchanged.
 
 **Demo mode:** the `/login` page shows a **"Try the demo"** button when `VITE_DEMO_EMAIL` / `VITE_DEMO_PASSWORD` are set in `frontend/.env`. It signs into the public demo account `demo@notetaker.app` (password `DemoNotes2026!`) seeded by `python -m scripts.seed_demo` with 3 folders, 5 notes, and 2 ready PDFs. Credentials are public by design; the account only sees seeded sample data.
 
@@ -497,6 +497,11 @@ Detailed future-level plans below are a guide and may be adjusted.
 - Left the local folder name and the local `DATABASE_URL` database name unchanged (filesystem/dev only).
 - **Evidence:** typecheck · oxlint 0 · vitest `45 passed` · build ok · backend `70 passed` · ruff clean.
 - **Commit:** `1fb368e`.
+
+### 2026-11-09 — Git identity + GitHub repo ✅
+- Re-authored the entire history to **Tawfek Khalil <281725953+tawfek99@users.noreply.github.com>** (GitHub noreply address → commits attribute to the account without exposing the real email).
+- Remote: **https://github.com/tawfek99/vellum** (public).
+- **Note:** re-authoring rewrote every commit hash; hashes in older log entries are pre-rewrite references.
 
 ---
 
